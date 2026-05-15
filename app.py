@@ -13,12 +13,18 @@ from wtforms import StringField, SelectField, DateField, TimeField, TextAreaFiel
 from wtforms.validators import DataRequired, Length, Regexp, NumberRange, Optional
 from flask_wtf.csrf import CSRFProtect
 
+from dotenv import load_dotenv
 app = Flask(__name__)
 CSRFProtect(app)
+load_dotenv('.env')
 
 # --- Cấu hình hệ thống ---
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'den-coffee-6868-secret')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///coffee.db')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///coffee.db')
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///coffee.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 
@@ -28,9 +34,10 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Vui lòng đăng nhập để tiếp tục.'
 
-with app.app_context():
-    db.create_all()
-    print("Database tables created successfully!")
+admin_user = os.environ.get('ADMIN_USER')
+admin_password = os.environ.get('ADMIN_PASSWORD')
+manager_user = os.environ.get('MANAGER_USER')
+manager_password = os.environ.get('MANAGER_PASSWORD')
 
 
 # --- Form Definitions ---
@@ -111,13 +118,13 @@ def role_required(*roles):
 def seed_database():
     with app.app_context():
         if not User.query.filter_by(username='admin').first():
-            admin = User(username='admin', role='admin')
-            admin.set_password('admin123')
+            admin = User(username=admin_user, role='admin')
+            admin.set_password(admin_password)
             db.session.add(admin)
 
         if not User.query.filter_by(username='manager').first():
-            manager = User(username='manager', role='manager')
-            manager.set_password('manager123')
+            manager = User(username=manager_user, role='manager')
+            manager.set_password(manager_password)
             db.session.add(manager)
 
         db.session.commit()
@@ -352,9 +359,12 @@ def forbidden(e):
 @app.errorhandler(404)
 def not_found(e):
     return render_template('404.html'), 404
+with app.app_context():
+    db.create_all()
+    seed_database()
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        seed_database()
+    # with app.app_context():
+    #     db.create_all()
+    #     seed_database()
     app.run(host='0.0.0.0', port=2005)
