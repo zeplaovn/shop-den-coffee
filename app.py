@@ -28,6 +28,11 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Vui lòng đăng nhập để tiếp tục.'
 
+with app.app_context():
+    db.create_all()
+    print("Database tables created successfully!")
+
+
 # --- Form Definitions ---
 class BookingForm(FlaskForm):
     name = StringField('Họ và tên', validators=[DataRequired(), Length(min=2, max=100)])
