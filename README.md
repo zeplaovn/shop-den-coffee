@@ -31,13 +31,13 @@ The application provides a robust set of features for both customers and staff:
 We value your feedback and inquiries. Whether you are a customer, a developer, or a potential partner, feel free to reach out to us:
 
 *   **Email:** [zeplaovn@proton.me](mailto:zeplaovn@proton.me)
-*   **Store Address:** *[65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội]*
+*   **Store Address:** *[65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội]([65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội])*
 
 ## 🛠️ Installation & Setup
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/zeplaovn/coffee-shop.git
-    cd coffee-shop
+    git clone https://github.com/zeplaovn/shop-den-coffee.git
+    cd shop-den-coffee
     ```
 2.  **Create a virtual environment:**
     ```bash
