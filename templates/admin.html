@@ -292,14 +292,14 @@
                                     <div class="action-btns">
                                         {% if not b.is_confirmed %}
                                         <form action="{{ url_for('confirm_booking', id=b.id) }}" method="POST" style="display:inline">
-                                            {{ form.hidĐEN_tag() }}
+                                            {{ form.hidden_tag() }}
                                             <button type="submit" class="action-btn" title="Xác nhận">
                                                 <i class="fas fa-check"></i>
                                             </button>
                                         </form>
                                         {% endif %}
                                         <form action="{{ url_for('delete_booking', id=b.id) }}" method="POST" style="display:inline" onsubmit="return confirm('Xoá yêu cầu của {{ b.customer_name }}?')">
-                                            {{ form.hidĐEN_tag() }}
+                                            {{ form.hidden_tag() }}
                                             <button type="submit" class="action-btn danger" title="Xoá">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
@@ -331,7 +331,7 @@
                     </div>
                     <div style="padding:1.5rem">
                         <form action="{{ url_for('add_menu_item') }}" method="POST" class="menu-form" id="add-menu-form">
-                            {{ form.hidĐEN_tag() }}
+                            {{ form.hidden_tag() }}
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label class="form-label">Tên món <span class="required">*</span></label>
@@ -424,7 +424,7 @@
                                         </button>
                                         <form action="{{ url_for('delete_menu_item', id=item.id) }}" method="POST" style="display:inline"
                                               onsubmit="return confirm('Xoá món \"{{ item.name }}\"?')">
-                                            {{ form.hidĐEN_tag() }}
+                                            {{ form.hidden_tag() }}
                                             <button type="submit" class="action-btn danger" title="Xoá">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
@@ -462,7 +462,7 @@
                 <button class="modal-close" onclick="closeEditModalDirect()"><i class="fas fa-times"></i></button>
             </div>
             <form id="editForm" method="POST">
-                {{ form.hidĐEN_tag() }}
+                {{ form.hidden_tag() }}
                 <div class="modal-body">
                     <div class="form-grid">
                         <div class="form-group">
