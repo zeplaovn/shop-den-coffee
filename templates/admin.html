@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard | DEN Coffee</title>
+    <title>Admin Dashboard | ĐEN Coffee</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
@@ -12,7 +12,7 @@
 
     <aside class="sidebar">
         <div class="sidebar-logo">
-            DEN COFFEE
+            ĐEN COFFEE
             <span>Admin Panel</span>
         </div>
         <nav class="sidebar-nav">
@@ -56,7 +56,7 @@
         <div class="topbar">
             <div>
                 <div class="topbar-title" id="topbar-title">Dashboard</div>
-                <div class="topbar-sub" id="topbar-sub">Quản lý đặt bàn và hoạt động DEN Coffee</div>
+                <div class="topbar-sub" id="topbar-sub">Quản lý đặt bàn và hoạt động ĐEN Coffee</div>
             </div>
             <div class="topbar-right">
                 <div class="topbar-date" id="currentDate">--/--/----</div>
@@ -292,14 +292,14 @@
                                     <div class="action-btns">
                                         {% if not b.is_confirmed %}
                                         <form action="{{ url_for('confirm_booking', id=b.id) }}" method="POST" style="display:inline">
-                                            {{ form.hidden_tag() }}
+                                            {{ form.hidĐEN_tag() }}
                                             <button type="submit" class="action-btn" title="Xác nhận">
                                                 <i class="fas fa-check"></i>
                                             </button>
                                         </form>
                                         {% endif %}
                                         <form action="{{ url_for('delete_booking', id=b.id) }}" method="POST" style="display:inline" onsubmit="return confirm('Xoá yêu cầu của {{ b.customer_name }}?')">
-                                            {{ form.hidden_tag() }}
+                                            {{ form.hidĐEN_tag() }}
                                             <button type="submit" class="action-btn danger" title="Xoá">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
@@ -331,7 +331,7 @@
                     </div>
                     <div style="padding:1.5rem">
                         <form action="{{ url_for('add_menu_item') }}" method="POST" class="menu-form" id="add-menu-form">
-                            {{ form.hidden_tag() }}
+                            {{ form.hidĐEN_tag() }}
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label class="form-label">Tên món <span class="required">*</span></label>
@@ -424,7 +424,7 @@
                                         </button>
                                         <form action="{{ url_for('delete_menu_item', id=item.id) }}" method="POST" style="display:inline"
                                               onsubmit="return confirm('Xoá món \"{{ item.name }}\"?')">
-                                            {{ form.hidden_tag() }}
+                                            {{ form.hidĐEN_tag() }}
                                             <button type="submit" class="action-btn danger" title="Xoá">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
@@ -462,7 +462,7 @@
                 <button class="modal-close" onclick="closeEditModalDirect()"><i class="fas fa-times"></i></button>
             </div>
             <form id="editForm" method="POST">
-                {{ form.hidden_tag() }}
+                {{ form.hidĐEN_tag() }}
                 <div class="modal-body">
                     <div class="form-grid">
                         <div class="form-group">
@@ -515,7 +515,7 @@
         const views = { dashboard: 'view-dashboard', bookings: 'view-bookings', menu: 'view-menu' };
         const navIds = { dashboard: 'nav-dashboard', bookings: 'nav-bookings', menu: 'nav-menu' };
         const titles = {
-            dashboard: ['Dashboard', 'Quản lý đặt bàn và hoạt động DEN Coffee'],
+            dashboard: ['Dashboard', 'Quản lý đặt bàn và hoạt động ĐEN Coffee'],
             bookings:  ['Đặt Bàn', 'Danh sách tất cả yêu cầu đặt bàn'],
             menu:      ['Thực Đơn', 'Thêm, sửa, xoá các món trong thực đơn']
         };
