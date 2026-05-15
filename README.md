@@ -31,7 +31,7 @@ The application provides a robust set of features for both customers and staff:
 We value your feedback and inquiries. Whether you are a customer, a developer, or a potential partner, feel free to reach out to us:
 
 *   **Email:** [zeplaovn@proton.me](mailto:zeplaovn@proton.me)
-*   **Store Address:** *[65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội]([65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội])*
+*   **Store Address:** *[65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội](65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội)*
 
 ## 🛠️ Installation & Setup
 1.  **Clone the repository:**
