@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thu Ngân | DEN Coffee</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/manager.css') }}">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            DEN COFFEE
+            <span>Thu Ngân · POS</span>
+        </div>
+        <nav class="sidebar-nav">
+            {% set pending_count = bookings | default([]) | rejectattr('is_confirmed') | list | length %}
+            <div class="nav-section-label">Chức Năng</div>
+            <a href="/manager" class="nav-item active"><i class="fas fa-cash-register"></i> Lên Đơn / POS</a>
+            <a href="/manager" class="nav-item">
+                <i class="fas fa-calendar-alt"></i> Đặt Bàn Hôm Nay
+                {% if pending_count > 0 %}<span class="badge">{{ pending_count }}</span>{% endif %}
+            </a>
+            <div class="nav-section-label">Liên Kết</div>
+            {% if current_user.role == 'admin' %}
+            <a href="/admin" class="nav-item"><i class="fas fa-chart-pie"></i> Admin Dashboard</a>
+            {% endif %}
+            <a href="/" target="_blank" class="nav-item"><i class="fas fa-external-link-alt"></i> Trang Khách Hàng</a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">{{ current_user.username[0].upper() }}</div>
+                <div>
+                    <div class="user-name">{{ current_user.username }}</div>
+                    <div class="user-role">{{ 'Quản Trị Viên' if current_user.role == 'admin' else 'Thu Ngân' }}</div>
+                </div>
+            </div>
+            <a href="/logout" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Đăng xuất
+            </a>
+        </div>
+    </aside>
+
+    <!-- Receipt Modal -->
+    <div class="modal-overlay" id="receiptModal">
+        <div class="modal">
+            <div class="receipt-header">
+                <div class="receipt-logo">DEN COFFEE</div>
+                <div class="receipt-sub">65 Hồ Hoàn Kiếm · Thanh Xuân · Hà Nội</div>
+                <div class="receipt-time" id="receiptTime"></div>
+            </div>
+            <div class="receipt-items" id="receiptItems"></div>
+            <div class="receipt-total">
+                <span class="receipt-total-label">TỔNG CỘNG</span>
+                <span class="receipt-total-val" id="receiptTotal"></span>
+            </div>
+            <div class="receipt-thanks">"Cảm ơn quý khách. Hẹn gặp lại!"</div>
+            <div class="receipt-actions">
+                <button class="btn-receipt-print" onclick="window.print()">
+                    <i class="fas fa-print"></i> In hoá đơn
+                </button>
+                <button class="btn-receipt-close" onclick="closeReceipt()">
+                    Đóng & Đơn Mới
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL XEM CHI TIẾT ĐẶT BÀN -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal" style="max-width: 420px; text-align: left;">
+            <h3 style="margin-top: 0; color: var(--espresso); border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                <i class="fas fa-info-circle"></i> Chi Tiết Đặt Bàn
+            </h3>
+            <div style="margin: 15px 0; line-height: 1.6; font-size: 0.9rem;">
+                <p><strong>Khách hàng:</strong> <span id="detName"></span></p>
+                <p><strong>Số điện thoại:</strong> <span id="detPhone"></span></p>
+                <p><strong>Ghi chú / Đơn hàng:</strong></p>
+                <div id="detNoteBlock" style="background: #f9f9f9; padding: 10px; border-radius: 4px; border-left: 3px solid var(--gold); font-style: italic;"></div>
+            </div>
+            <div class="receipt-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn-receipt-print" id="btnImportFromModal" style="background: var(--gold); color: white; flex: 1;">
+                    <i class="fas fa-download"></i> Import đơn vào POS
+                </button>
+                <button class="btn-receipt-close" onclick="closeDetailModal()" style="flex: 1; margin-top: 0;">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <main class="main">
+        <div class="topbar">
+            <div>
+                <div class="topbar-title"><i class="fas fa-cash-register" style="color:var(--gold);margin-right:0.5rem"></i>Thu Ngân / POS</div>
+                <div class="topbar-sub">Lên đơn và xác nhận đặt bàn</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:1rem">
+                <div class="topbar-time" id="liveClock">--:--:--</div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ 'success' if category == 'success' else 'error' }}">
+                    <i class="fas {{ 'fa-check-circle' if category == 'success' else 'fa-exclamation-circle' }}"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <!-- POS -->
+            <div class="pos-layout">
+
+                <!-- Left: Menu selector -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title"><i class="fas fa-th" style="color:var(--gold);margin-right:0.5rem"></i>Chọn Món</span>
+                        <span style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted)" id="itemCount">0 món đã chọn</span>
+                    </div>
+                    <div class="menu-tabs">
+                        <button class="tab active" data-filter="all">Tất cả</button>
+                        <button class="tab" data-filter="coffee">☕ Cà Phê</button>
+                        <button class="tab" data-filter="cake">🥐 Bánh & Ăn</button>
+                    </div>
+                    <div class="menu-items-grid" id="menuGrid"></div>
+                </div>
+
+                <!-- Right: Order -->
+                <div class="panel order-panel">
+                    <div class="panel-header">
+                        <span class="panel-title"><i class="fas fa-receipt" style="color:var(--gold);margin-right:0.5rem"></i>Đơn Hàng</span>
+                        <span style="font-size:0.72rem;color:var(--muted)" id="tableLabel">—</span>
+                    </div>
+                    <div class="order-list" id="orderList">
+                        <div class="order-empty">Chưa có món nào — chọn từ thực đơn.</div>
+                    </div>
+                    <div class="order-summary">
+                        <div class="summary-row"><span>Tạm tính</span><span id="subtotal" style="font-family:'DM Mono',monospace">0đ</span></div>
+                        <div class="summary-row"><span>Giảm giá</span><span style="color:var(--green)">—</span></div>
+                        <div class="summary-row total">
+                            <span>Tổng cộng</span>
+                            <span class="val" id="total">0đ</span>
+                        </div>
+                        <button class="pay-btn" onclick="handlePayment()">
+                            <i class="fas fa-credit-card"></i> Thanh Toán
+                        </button>
+                        <button class="clear-btn" onclick="clearOrder()">
+                            <i class="fas fa-times"></i> Xóa đơn
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bookings table -->
+            {% set pending_count = bookings | default([]) | rejectattr('is_confirmed') | list | length %}
+            <div class="panel bookings-panel">
+                <div class="panel-header">
+                    <span class="panel-title"><i class="fas fa-calendar-alt" style="color:var(--gold);margin-right:0.5rem"></i>Đặt Bàn — Cần Xác Nhận</span>
+                    <span style="font-size:0.73rem;color:var(--gold)">
+                        {{ pending_count }} chờ · {{ bookings | length }} tổng
+                    </span>
+                </div>
+
+                {% if bookings %}
+                <div style="overflow-x:auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Khách hàng</th>
+                            <th>Ngày / Giờ</th>
+                            <th>Loại</th>
+                            <th>Ghi chú</th>
+                            <th>Trạng thái</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in bookings %}
+                        <tr>
+                            <td>
+                                <strong style="color:var(--espresso)">{{ b.customer_name }}</strong><br>
+                                <span style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace">{{ b.customer_phone }}</span>
+                            </td>
+                            <td>
+                                {{ b.booking_date.strftime('%d/%m/%Y') if b.booking_date else '---' }}<br>
+                                <span style="font-family:'DM Mono',monospace;font-size:0.73rem;color:var(--muted)">
+                                    {{ b.booking_time.strftime('%H:%M') if b.booking_time else '---' }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if b.booking_type == 'member' %}
+                                <span class="badge badge-member"><i class="fas fa-id-card"></i> Thành viên</span>
+                                {% else %}
+                                <span class="badge badge-booking"><i class="fas fa-calendar"></i> Đặt bàn</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:0.78rem;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                                {{ b.note or '—' }}
+                            </td>
+                            <td>
+                                {% if b.is_confirmed %}
+                                <span class="badge badge-confirmed"><i class="fas fa-check"></i> Xác nhận</span>
+                                {% else %}
+                                <span class="badge badge-pending"><i class="fas fa-clock"></i> Chờ xử lý</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <!-- BUG FIX #3: All three arguments now use | tojson filter.
+                                     This safely escapes apostrophes, quotes, and special chars
+                                     in customer names, phones, and notes. -->
+                                <button type="button" class="action-btn" style="background: #e2d7cd; color: var(--espresso); margin-right: 5px;" title="Xem chi tiết" onclick='openDetailModal({{ b.customer_name | tojson }}, {{ b.customer_phone | tojson }}, {{ (b.note or "") | tojson }})'>
+                                    <i class="fas fa-eye"></i> Xem
+                                </button>
+                                <button type="button" class="action-btn" style="background: var(--gold); color: white; margin-right: 5px;" title="Import đơn" onclick='importToPOS({{ (b.note or "") | tojson }}, {{ b.customer_name | tojson }})'>
+                                    <i class="fas fa-file-import"></i> Nhập đơn
+                                </button>
+<!--
+                                {% if not b.is_confirmed %}
+                                <form action="{{ url_for('confirm_booking', id=b.id) }}" method="POST" style="display:inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="action-btn" title="Xác nhận">
+                                        <i class="fas fa-check"></i> Xác nhận
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span style="font-size:0.73rem;color:var(--green)"><i class="fas fa-check-circle"></i> Đã xác nhận</span>
+                                {% endif %} -->
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-check"></i>
+                    Chưa có đặt bàn nào.
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Nạp dữ liệu menu từ database trước, sau đó mới load pos.js -->
+    <script>
+        const menuItems = [
+            {% for item in menu %}
+            {
+                id: {{ item.id }},
+                name: {{ item.name | tojson }},
+                price: {{ item.price }},
+                category: {{ item.category | tojson }}
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+    </script>
+
+    <!-- BUG FIX #1: pos.js loads AFTER the menuItems array above,
+         so renderMenu() at the bottom of pos.js runs safely. -->
+    <script src="{{ url_for('static', filename='js/pos.js') }}"></script>
+
+</body>
+</html>

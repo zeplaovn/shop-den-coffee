@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>403 — Không có quyền truy cập | DEN Coffee</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --espresso: #1a1008; --coffee: #3a2d1e; --gold: #9a7c4e;
+            --tan: #c4a97a; --cream: #f5f0e8; --light: #faf7f2; --muted: #7a6a55;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--light);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+        }
+        .error-wrap { max-width: 480px; }
+        .error-code {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 7rem;
+            font-weight: 300;
+            color: var(--gold);
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+        .error-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.75rem;
+            font-weight: 400;
+            color: var(--espresso);
+            margin: 0.5rem 0 1rem;
+        }
+        .error-desc {
+            font-size: 0.9rem;
+            color: var(--muted);
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+        }
+        .error-actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            padding: 0.75rem 1.75rem;
+            border-radius: 100px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            text-decoration: none;
+            transition: all 0.25s;
+            cursor: pointer;
+            border: none;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .btn-primary { background: var(--coffee); color: var(--cream); }
+        .btn-primary:hover { background: var(--espresso); transform: translateY(-1px); }
+        .btn-ghost { background: transparent; color: var(--muted); border: 1px solid #ddd; }
+        .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+        .error-divider {
+            width: 40px; height: 1px;
+            background: var(--gold); margin: 1.5rem auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-wrap">
+        <div class="error-code">403</div>
+        <div class="error-divider"></div>
+        <h1 class="error-title">Không có quyền truy cập</h1>
+        <p class="error-desc">
+            Tài khoản của bạn không có quyền xem trang này.<br>
+            Vui lòng đăng nhập bằng tài khoản phù hợp hoặc quay lại trang trước.
+        </p>
+        <div class="error-actions">
+            <a href="javascript:history.back()" class="btn btn-ghost">← Quay lại</a>
+            <a href="/login" class="btn btn-primary">Đăng nhập lại</a>
+        </div>
+    </div>
+</body>
+</html>

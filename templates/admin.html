@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | DEN Coffee</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            DEN COFFEE
+            <span>Admin Panel</span>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Tổng Quan</div>
+            <a href="/admin" class="nav-item" id="nav-dashboard" onclick="switchView('dashboard', event)">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <div class="nav-section-label">Quản Lý</div>
+            <a href="#" class="nav-item" id="nav-bookings" onclick="switchView('bookings', event)">
+                <i class="fas fa-calendar-alt"></i> Đặt Bàn
+                {% set pending_count = bookings | selectattr('is_confirmed', 'equalto', False) | list | length %}
+                {% if pending_count > 0 %}<span class="badge">{{ pending_count }}</span>{% endif %}
+            </a>
+            <a href="#" class="nav-item" id="nav-menu" onclick="switchView('menu', event)">
+                <i class="fas fa-mug-hot"></i> Thực Đơn
+                <span class="badge badge-count">{{ menu_items | length }}</span>
+            </a>
+            <div class="nav-section-label">Hệ Thống</div>
+            <a href="/manager" class="nav-item">
+                <i class="fas fa-cash-register"></i> Thu Ngân (POS)
+            </a>
+            <a href="/" target="_blank" class="nav-item">
+                <i class="fas fa-external-link-alt"></i> Trang Khách Hàng
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">{{ current_user.username[0].upper() }}</div>
+                <div>
+                    <div class="user-name">{{ current_user.username }}</div>
+                    <div class="user-role">{{ 'Quản Trị Viên' if current_user.role == 'admin' else 'Quản Lý' }}</div>
+                </div>
+            </div>
+            <a href="/logout" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Đăng xuất
+            </a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <div>
+                <div class="topbar-title" id="topbar-title">Dashboard</div>
+                <div class="topbar-sub" id="topbar-sub">Quản lý đặt bàn và hoạt động DEN Coffee</div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-date" id="currentDate">--/--/----</div>
+                <div class="notif-btn" title="Thông báo">
+                    <i class="fas fa-bell"></i>
+                    {% set pending_count = bookings | selectattr('is_confirmed', 'equalto', False) | list | length %}
+                    {% if pending_count > 0 %}
+                        <div class="notif-dot"></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container" id="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ 'success' if category == 'success' else 'error' }}">
+                    <i class="fas {{ 'fa-check-circle' if category == 'success' else 'fa-exclamation-circle' }}"></i>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% set total = bookings | length %}
+            {% set confirmed_count = bookings | selectattr('is_confirmed', 'equalto', True) | list | length %}
+            {% set pending_count = total - confirmed_count %}
+            {% set members_cnt = bookings | selectattr('booking_type', 'equalto', 'member') | list | length %}
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- VIEW: DASHBOARD                             -->
+            <!-- ═══════════════════════════════════════════ -->
+            <div id="view-dashboard">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon icon-blue"><i class="fas fa-calendar-check"></i></div>
+                            <span class="stat-trend trend-up">Tổng</span>
+                        </div>
+                        <div class="stat-value">{{ total }}</div>
+                        <div class="stat-label">Tất cả đặt bàn</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon icon-amber"><i class="fas fa-hourglass-half"></i></div>
+                            {% if pending_count > 0 %}<span class="stat-trend trend-warn">Mới</span>{% endif %}
+                        </div>
+                        <div class="stat-value">{{ pending_count }}</div>
+                        <div class="stat-label">Chờ xác nhận</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon icon-green"><i class="fas fa-check-circle"></i></div>
+                            <span class="stat-trend trend-up">OK</span>
+                        </div>
+                        <div class="stat-value">{{ confirmed_count }}</div>
+                        <div class="stat-label">Đã xác nhận</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-top">
+                            <div class="stat-icon" style="background:#f3e8ff;color:#7c3aed"><i class="fas fa-id-card"></i></div>
+                        </div>
+                        <div class="stat-value">{{ members_cnt }}</div>
+                        <div class="stat-label">Thành viên mới</div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title"><i class="fas fa-list" style="margin-right:0.5rem;opacity:0.5"></i>Yêu Cầu Gần Đây</span>
+                            <a href="#" class="panel-link" onclick="switchView('bookings', event)">Xem tất cả →</a>
+                        </div>
+                        {% if bookings %}
+                        <div style="overflow-x:auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Khách hàng</th>
+                                    <th>Ngày / Giờ</th>
+                                    <th>Loại</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for b in bookings[:6] %}
+                                <tr>
+                                    <td class="td-name">
+                                        <strong>{{ b.customer_name }}</strong>
+                                        <span>{{ b.customer_phone }}</span>
+                                    </td>
+                                    <td class="td-date">
+                                        {{ b.booking_date.strftime('%d/%m/%Y') if b.booking_date else '---' }}
+                                        <small>{{ b.booking_time.strftime('%H:%M') if b.booking_time else '---' }}</small>
+                                    </td>
+                                    <td>
+                                        {% if b.booking_type == 'member' %}
+                                        <span class="badge badge-member"><i class="fas fa-id-card"></i> Thành viên</span>
+                                        {% else %}
+                                        <span class="badge badge-booking"><i class="fas fa-calendar"></i> Đặt bàn</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if b.is_confirmed %}
+                                        <span class="badge badge-confirmed"><i class="fas fa-check"></i> Đã xác nhận</span>
+                                        {% else %}
+                                        <span class="badge badge-pending"><i class="fas fa-clock"></i> Chờ xử lý</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        </div>
+                        {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-times"></i> Chưa có dữ liệu đặt bàn.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:1.25rem">
+                        <div class="panel">
+                            <div class="panel-header"><span class="panel-title">Tỷ Lệ Yêu Cầu</span></div>
+                            <div class="breakdown-list" style="padding: 1.25rem;">
+                                {% set b_count = bookings | selectattr('booking_type', 'equalto', 'booking') | list | length %}
+                                {% set m_count = bookings | selectattr('booking_type', 'equalto', 'member') | list | length %}
+                                <div class="breakdown-item">
+                                    <div class="breakdown-top">
+                                        <span class="breakdown-label">Đặt bàn</span>
+                                        <span class="breakdown-count">{{ b_count }}</span>
+                                    </div>
+                                    <div class="bar-track">
+                                        <div class="bar-fill bar-blue" style="width:{{ (b_count/total*100)|round|int if total > 0 else 0 }}%"></div>
+                                    </div>
+                                </div>
+                                <div class="breakdown-item">
+                                    <div class="breakdown-top">
+                                        <span class="breakdown-label">Thành viên</span>
+                                        <span class="breakdown-count">{{ m_count }}</span>
+                                    </div>
+                                    <div class="bar-track">
+                                        <div class="bar-fill bar-green" style="width:{{ (m_count/total*100)|round|int if total > 0 else 0 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <div class="panel-header">
+                                <span class="panel-title">Thực Đơn</span>
+                                <a href="#" class="panel-link" onclick="switchView('menu', event)">Quản lý →</a>
+                            </div>
+                            <div style="padding:0.75rem 1.1rem">
+                                {% set coffee_cnt = menu_items | selectattr('category', 'equalto', 'coffee') | list | length %}
+                                {% set cake_cnt = menu_items | selectattr('category', 'equalto', 'cake') | list | length %}
+                                {% set drink_cnt = menu_items | selectattr('category', 'equalto', 'drink') | list | length %}
+                                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;padding:0.5rem 0">
+                                    <div class="mini-stat">
+                                        <span class="mini-stat-val">{{ coffee_cnt }}</span>
+                                        <span class="mini-stat-label">Cà phê</span>
+                                    </div>
+                                    <div class="mini-stat">
+                                        <span class="mini-stat-val">{{ cake_cnt }}</span>
+                                        <span class="mini-stat-label">Bánh ngọt</span>
+                                    </div>
+                                    <div class="mini-stat">
+                                        <span class="mini-stat-val">{{ drink_cnt }}</span>
+                                        <span class="mini-stat-label">Đồ uống</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- VIEW: BOOKINGS                              -->
+            <!-- ═══════════════════════════════════════════ -->
+            <div id="view-bookings" style="display:none">
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title"><i class="fas fa-calendar-alt" style="margin-right:0.5rem;opacity:0.5"></i>Danh Sách Yêu Cầu</span>
+                        <span class="panel-meta">{{ total }} yêu cầu</span>
+                    </div>
+                    {% if bookings %}
+                    <div style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Khách hàng</th>
+                                <th>Ngày / Giờ</th>
+                                <th>Loại</th>
+                                <th>Ghi chú</th>
+                                <th>Trạng thái</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in bookings %}
+                            <tr>
+                                <td class="td-name">
+                                    <strong>{{ b.customer_name }}</strong>
+                                    <span>{{ b.customer_phone }}</span>
+                                </td>
+                                <td class="td-date">
+                                    {{ b.booking_date.strftime('%d/%m/%Y') if b.booking_date else '---' }}
+                                    <small>{{ b.booking_time.strftime('%H:%M') if b.booking_time else '---' }}</small>
+                                </td>
+                                <td>
+                                    {% if b.booking_type == 'member' %}
+                                    <span class="badge badge-member"><i class="fas fa-id-card"></i> Thành viên</span>
+                                    {% else %}
+                                    <span class="badge badge-booking"><i class="fas fa-calendar"></i> Đặt bàn</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="note-text" title="{{ b.note }}">{{ b.note or '—' }}</span>
+                                </td>
+                                <td>
+                                    {% if b.is_confirmed %}
+                                    <span class="badge badge-confirmed"><i class="fas fa-check"></i> Đã xác nhận</span>
+                                    {% else %}
+                                    <span class="badge badge-pending"><i class="fas fa-clock"></i> Chờ xử lý</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-btns">
+                                        {% if not b.is_confirmed %}
+                                        <form action="{{ url_for('confirm_booking', id=b.id) }}" method="POST" style="display:inline">
+                                            {{ form.hidden_tag() }}
+                                            <button type="submit" class="action-btn" title="Xác nhận">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        <form action="{{ url_for('delete_booking', id=b.id) }}" method="POST" style="display:inline" onsubmit="return confirm('Xoá yêu cầu của {{ b.customer_name }}?')">
+                                            {{ form.hidden_tag() }}
+                                            <button type="submit" class="action-btn danger" title="Xoá">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-times"></i> Chưa có dữ liệu đặt bàn.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════ -->
+            <!-- VIEW: MENU CRUD                             -->
+            <!-- ═══════════════════════════════════════════ -->
+            <div id="view-menu" style="display:none">
+
+                <!-- Add new item -->
+                <div class="panel" style="margin-bottom:1.5rem">
+                    <div class="panel-header">
+                        <span class="panel-title"><i class="fas fa-plus-circle" style="margin-right:0.5rem;opacity:0.5"></i>Thêm Món Mới</span>
+                    </div>
+                    <div style="padding:1.5rem">
+                        <form action="{{ url_for('add_menu_item') }}" method="POST" class="menu-form" id="add-menu-form">
+                            {{ form.hidden_tag() }}
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Tên món <span class="required">*</span></label>
+                                    {{ form.name(class='form-input', placeholder='VD: Cà phê đen đá') }}
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Danh mục <span class="required">*</span></label>
+                                    {{ form.category(class='form-select') }}
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Giá (VNĐ) <span class="required">*</span></label>
+                                    {{ form.price(class='form-input', placeholder='VD: 35000') }}
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">URL hình ảnh</label>
+                                    {{ form.image_url(class='form-input', placeholder='https://...') }}
+                                </div>
+                                <div class="form-group form-group-full">
+                                    <label class="form-label">Mô tả</label>
+                                    {{ form.description(class='form-textarea', placeholder='Mô tả ngắn về món...', rows=2) }}
+                                </div>
+                            </div>
+                            <div style="margin-top:1rem">
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-plus"></i> Thêm vào thực đơn
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Menu items list by category -->
+                {% set categories = [('coffee','Cà Phê','fa-mug-hot','icon-amber'), ('cake','Bánh Ngọt','fa-birthday-cake','icon-green'), ('drink','Đồ Uống Khác','fa-glass-water','icon-blue')] %}
+                {% for cat_key, cat_label, cat_icon, cat_cls in categories %}
+                {% set cat_items = menu_items | selectattr('category', 'equalto', cat_key) | list %}
+                {% if cat_items %}
+                <div class="panel" style="margin-bottom:1.25rem">
+                    <div class="panel-header">
+                        <span class="panel-title">
+                            <span class="stat-icon {{ cat_cls }}" style="width:28px;height:28px;font-size:0.75rem;display:inline-flex;vertical-align:middle;margin-right:0.5rem;border-radius:8px">
+                                <i class="fas {{ cat_icon }}"></i>
+                            </span>
+                            {{ cat_label }}
+                        </span>
+                        <span class="panel-meta">{{ cat_items | length }} món</span>
+                    </div>
+                    <div style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Hình ảnh</th>
+                                <th>Tên món</th>
+                                <th>Giá</th>
+                                <th>Mô tả</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in cat_items %}
+                            <tr>
+                                <td style="width:56px">
+                                    {% if item.image_url %}
+                                    <img src="{{ item.image_url }}" alt="{{ item.name }}"
+                                         style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--warm)"
+                                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                                    <div style="display:none;width:48px;height:48px;background:var(--light);border-radius:10px;border:1px solid var(--warm);align-items:center;justify-content:center;color:var(--muted);font-size:1.2rem">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                    {% else %}
+                                    <div style="width:48px;height:48px;background:var(--light);border-radius:10px;border:1px solid var(--warm);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.2rem">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong style="color:var(--espresso)">{{ item.name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="price-tag">{{ '{:,.0f}'.format(item.price) }}đ</span>
+                                </td>
+                                <td>
+                                    <span class="note-text" title="{{ item.description }}">{{ item.description or '—' }}</span>
+                                </td>
+                                <td>
+                                    <div class="action-btns">
+                                        <button type="button" class="action-btn"
+                                            onclick="openEditModal({{ item.id }}, '{{ item.name|e }}', '{{ item.category }}', {{ item.price }}, '{{ item.description|e }}', '{{ item.image_url|e }}')"
+                                            title="Sửa">
+                                            <i class="fas fa-pen"></i>
+                                        </button>
+                                        <form action="{{ url_for('delete_menu_item', id=item.id) }}" method="POST" style="display:inline"
+                                              onsubmit="return confirm('Xoá món \"{{ item.name }}\"?')">
+                                            {{ form.hidden_tag() }}
+                                            <button type="submit" class="action-btn danger" title="Xoá">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+
+                {% if not menu_items %}
+                <div class="panel">
+                    <div class="empty-state">
+                        <i class="fas fa-utensils"></i> Thực đơn chưa có món nào. Thêm món đầu tiên ở trên!
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+        </div><!-- /content -->
+    </main>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- MODAL: Edit Menu Item                       -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="modal-overlay" id="editModal" onclick="closeEditModal(event)">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title"><i class="fas fa-pen" style="margin-right:0.5rem;opacity:0.5"></i>Chỉnh Sửa Món</span>
+                <button class="modal-close" onclick="closeEditModalDirect()"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="editForm" method="POST">
+                {{ form.hidden_tag() }}
+                <div class="modal-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Tên món <span class="required">*</span></label>
+                            <input type="text" name="name" id="edit-name" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Danh mục <span class="required">*</span></label>
+                            <select name="category" id="edit-category" class="form-select">
+                                <option value="coffee">Cà phê</option>
+                                <option value="cake">Bánh ngọt</option>
+                                <option value="drink">Đồ uống khác</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Giá (VNĐ) <span class="required">*</span></label>
+                            <input type="number" name="price" id="edit-price" class="form-input" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">URL hình ảnh</label>
+                            <input type="text" name="image_url" id="edit-image_url" class="form-input" placeholder="https://...">
+                        </div>
+                        <div class="form-group form-group-full">
+                            <label class="form-label">Mô tả</label>
+                            <textarea name="description" id="edit-description" class="form-textarea" rows="2" placeholder="Mô tả ngắn về món..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost" onclick="closeEditModalDirect()">Huỷ</button>
+                    <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script>
+        // ── Date ──
+        const d = new Date();
+        document.getElementById('currentDate').textContent =
+            d.toLocaleDateString('vi-VN', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
+
+        // ── Auto-dismiss flash ──
+        document.querySelectorAll('.flash').forEach(el => {
+            setTimeout(() => { el.style.opacity='0'; setTimeout(() => el.remove(), 500); }, 4000);
+        });
+
+        // ── View switching ──
+        const views = { dashboard: 'view-dashboard', bookings: 'view-bookings', menu: 'view-menu' };
+        const navIds = { dashboard: 'nav-dashboard', bookings: 'nav-bookings', menu: 'nav-menu' };
+        const titles = {
+            dashboard: ['Dashboard', 'Quản lý đặt bàn và hoạt động DEN Coffee'],
+            bookings:  ['Đặt Bàn', 'Danh sách tất cả yêu cầu đặt bàn'],
+            menu:      ['Thực Đơn', 'Thêm, sửa, xoá các món trong thực đơn']
+        };
+
+        function switchView(view, event) {
+            if (event) event.preventDefault();
+            Object.keys(views).forEach(k => {
+                document.getElementById(views[k]).style.display = k === view ? '' : 'none';
+                document.getElementById(navIds[k])?.classList.toggle('active', k === view);
+            });
+            document.getElementById('topbar-title').textContent = titles[view][0];
+            document.getElementById('topbar-sub').textContent   = titles[view][1];
+            // Update hash without scrolling
+            history.replaceState(null, '', '#' + view);
+        }
+
+        // ── Init from hash ──
+        (function() {
+            const hash = location.hash.replace('#', '');
+            const view = views[hash] ? hash : 'dashboard';
+            switchView(view);
+        })();
+
+        // ── Flash: jump to menu if menu-related ──
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for cat, msg in messages %}
+        {% if 'món' in msg %}
+        switchView('menu');
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        // ── Edit Modal ──
+        function openEditModal(id, name, category, price, description, imageUrl) {
+            document.getElementById('editForm').action = '/admin/menu/edit/' + id;
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-category').value = category;
+            document.getElementById('edit-price').value = price;
+            document.getElementById('edit-description').value = description;
+            document.getElementById('edit-image_url').value = imageUrl;
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        function closeEditModal(event) {
+            if (event.target === document.getElementById('editModal')) {
+                document.getElementById('editModal').classList.remove('active');
+            }
+        }
+
+        function closeEditModalDirect() {
+            document.getElementById('editModal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

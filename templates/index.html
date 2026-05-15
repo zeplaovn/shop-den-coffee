@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEN Coffee | Hương Vị Từ Tâm</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div id="loader">
+        <div class="loader-inner">
+            <div class="loader-logo">DEN</div>
+            <div class="loader-bar"><div class="loader-fill"></div></div>
+        </div>
+    </div>
+
+    <div class="cursor" id="cursor"></div>
+    <div class="cursor-dot" id="cursorDot"></div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-banner">
+        {% for category, message in messages %}
+        <div class="flash {{ 'success' if category == 'success' else 'error' }}">
+            <i class="fas {{ 'fa-check-circle' if category == 'success' else 'fa-exclamation-circle' }}"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <nav id="navbar" class="nav-fixed">
+        <div class="nav-inner">
+            <a href="#home" class="nav-logo">DEN COFFEE</a>
+            <div class="nav-links">
+                <a href="#home" class="nav-link">Trang Chủ</a>
+                <a href="#story" class="nav-link">Câu Chuyện</a>
+                <a href="#menu" class="nav-link">Thực Đơn</a>
+                <a href="#booking" class="nav-link">Đặt Bàn</a>
+            </div>
+            <a href="#booking" class="nav-cta">Đặt Chỗ</a>
+            <button class="hamburger" id="hamburger" aria-label="Mở menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#home" class="mobile-link">Trang Chủ</a>
+        <a href="#story" class="mobile-link">Câu Chuyện</a>
+        <a href="#menu" class="mobile-link">Thực Đơn</a>
+        <a href="#booking" class="mobile-link">Đặt Bàn</a>
+    </div>
+
+    <section id="home" class="hero">
+        <div class="hero-bg">
+            <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=2070"
+                 alt="DEN Coffee không gian" class="hero-img" id="heroImg" loading="eager">
+            <div class="hero-overlay"></div>
+            <div class="hero-grain"></div>
+        </div>
+
+        <div class="hero-content" id="heroContent">
+            <div class="hero-eyebrow reveal-up">
+                <span class="eyebrow-line"></span>
+                <span>Hanoi · Est. 2019</span>
+                <span class="eyebrow-line"></span>
+            </div>
+            <h1 class="hero-title reveal-up delay-1">
+                <span class="title-line">Nơi Cà Phê</span>
+                <span class="title-line italic">Kể Chuyện</span>
+            </h1>
+            <p class="hero-sub reveal-up delay-2">"Mỗi tách là một khoảnh khắc — được rang tay, pha chậm, thưởng thức trọn vẹn."</p>
+            <div class="hero-actions reveal-up delay-3">
+                <a href="#menu" class="btn-primary">Khám Phá Thực Đơn</a>
+                <a href="#story" class="btn-ghost">Câu Chuyện Của Chúng Tôi</a>
+            </div>
+        </div>
+
+        <div class="hero-scroll">
+            <div class="scroll-line"></div>
+            <span>Cuộn xuống</span>
+        </div>
+
+        <div class="hero-badge">
+            <div class="badge-ring">
+                <svg viewBox="0 0 120 120" class="badge-svg">
+                    <path id="badgePath" d="M 60,60 m -45,0 a 45,45 0 1,1 90,0 a 45,45 0 1,1 -90,0"/>
+                    <text class="badge-text">
+                        <textPath href="#badgePath">· SPECIALTY COFFEE · HANOI · 2019 ·</textPath>
+                    </text>
+                </svg>
+                <div class="badge-center"><i class="fas fa-mug-hot"></i></div>
+            </div>
+        </div>
+    </section>
+
+    <div class="stats-strip reveal-up">
+        <div class="stat-item">
+            <span class="stat-num">12+</span>
+            <span class="stat-label">Loại Cà Phê Đặc Sản</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+            <span class="stat-num">5★</span>
+            <span class="stat-label">Đánh Giá Trung Bình</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+            <span class="stat-num">3K+</span>
+            <span class="stat-label">Khách Hàng Mỗi Tháng</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+            <span class="stat-num">6</span>
+            <span class="stat-label">Năm Kinh Nghiệm</span>
+        </div>
+    </div>
+
+    <section id="story" class="story-section">
+        <div class="story-grid">
+            <div class="story-images">
+                <div class="story-img-main reveal-left">
+                    <img src="https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&q=80&w=800" alt="Barista DEN Coffee">
+                </div>
+                <div class="story-img-accent reveal-left delay-1">
+                    <img src="https://images.unsplash.com/photo-1511537190424-bbbab87ac5eb?auto=format&fit=crop&q=80&w=500" alt="Hạt cà phê rang">
+                    <div class="accent-tag">Rang tay mỗi ngày</div>
+                </div>
+            </div>
+            <div class="story-text reveal-right">
+                <span class="section-tag">/ Câu Chuyện</span>
+                <h2 class="story-title">Từ Hạt Giống<br>Đến Tách Cà Phê</h2>
+                <div class="story-body">
+                    <p>DEN Coffee ra đời từ niềm đam mê với hạt cà phê Arabica Việt Nam — được trồng trên cao nguyên, rang tay trong từng mẻ nhỏ để giữ trọn hương vị tinh tế nhất.</p>
+                    <p>Chúng tôi tin rằng một tách cà phê ngon không chỉ đến từ hạt giống, mà còn từ sự tận tâm của người pha và không gian yên tĩnh để bạn thực sự cảm nhận.</p>
+                </div>
+                <div class="story-features">
+                    <div class="feature-pill"><i class="fas fa-leaf"></i> 100% Arabica Tây Nguyên</div>
+                    <div class="feature-pill"><i class="fas fa-fire"></i> Rang Tay Mỗi Ngày</div>
+                    <div class="feature-pill"><i class="fas fa-award"></i> Barista Chứng Chỉ SCA</div>
+                </div>
+                <a href="#menu" class="btn-outline">Xem Thực Đơn →</a>
+            </div>
+        </div>
+    </section>
+
+    <section id="menu" class="menu-section">
+        <div class="section-header reveal-up">
+            <span class="section-tag">/ Thực Đơn</span>
+            <h2 class="section-title">Tinh Hoa<br>Được Tuyển Chọn</h2>
+        </div>
+
+        <div class="menu-filter reveal-up delay-1">
+            <button class="filter-btn active" data-filter="all">All category</button>
+            <button class="filter-btn" data-filter="coffee">Coffee</button>
+            <button class="filter-btn" data-filter="cake">Cake</button>
+        </div>
+
+        <div class="menu-grid">
+            {% for item in coffees %}
+            <div class="menu-card reveal-up" style="animation-delay: {{ loop.index * 0.05 }}s"
+                 data-category="coffee">
+                <div class="card-img-wrap">
+                    <img src="{{ item.image_url }}" alt="{{ item.name }}" class="card-img" loading="lazy">
+                    <!-- BUG FIX #1: Removed duplicate overlay. Now uses one consistent card-order-btn. -->
+                    <div class="card-overlay">
+                        <button class="card-order-btn" data-name="{{ item.name }}">Chọn món này</button>
+                    </div>
+                    <div class="card-price">{{ "{:,.0f}".format(item.price) }}đ</div>
+                </div>
+                <div class="card-body">
+                    <h3 class="card-title">{{ item.name }}</h3>
+                    <p class="card-desc">{{ item.description }}</p>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% for item in cakes %}
+            <div class="menu-card reveal-up" style="animation-delay: {{ loop.index * 0.05 }}s"
+                 data-category="cake">
+                <div class="card-img-wrap">
+                    <img src="{{ item.image_url }}" alt="{{ item.name }}" class="card-img" loading="lazy">
+                    <div class="card-overlay">
+                        <button class="card-order-btn" data-name="{{ item.name }}">Chọn món này</button>
+                    </div>
+                    <div class="card-price">{{ "{:,.0f}".format(item.price) }}đ</div>
+                </div>
+                <div class="card-body">
+                    <h3 class="card-title">{{ item.name }}</h3>
+                    <p class="card-desc">{{ item.description }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="ambient-banner">
+        <div class="ambient-track">
+            {% for _ in range(6) %}
+            <span>Specialty Coffee</span><span class="dot">·</span>
+            <span>Hand Roasted</span><span class="dot">·</span>
+            <span>Single Origin</span><span class="dot">·</span>
+            <span>Hanoi, Vietnam</span><span class="dot">·</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <section id="booking" class="booking-section">
+        <div class="booking-grid">
+            <div class="booking-info reveal-left">
+                <span class="section-tag light">/ Đặt Bàn</span>
+                <h2 class="booking-title">Ghé Thăm<br>Không Gian<br>Của Chúng Tôi</h2>
+                <p class="booking-desc">Đặt bàn trước để có vị trí đẹp nhất, hoặc đăng ký thành viên để nhận ưu đãi đặc biệt mỗi tuần.</p>
+                <div class="contact-cards">
+                    <div class="contact-card">
+                        <div class="contact-icon"><i class="fas fa-phone-alt"></i></div>
+                        <div>
+                            <p class="contact-label">Hotline</p>
+                            <p class="contact-value">0989 427 905</p>
+                        </div>
+                    </div>
+                    <div class="contact-card">
+                        <div class="contact-icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div>
+                            <p class="contact-label">Địa Chỉ</p>
+                            <p class="contact-value">65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội</p>
+                        </div>
+                    </div>
+                    <div class="contact-card">
+                        <div class="contact-icon"><i class="fas fa-clock"></i></div>
+                        <div>
+                            <p class="contact-label">Giờ Mở Cửa</p>
+                            <p class="contact-value">T2–T6: 7:00–22:00 · Cuối tuần: 8:00–23:00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="booking-form-wrap reveal-right">
+                <div class="booking-form-card">
+                    <h3 class="form-title">Đặt Bàn / Đăng Ký</h3>
+
+                    <form action="{{ url_for('add_booking') }}" method="POST" class="booking-form" id="bookingForm">
+                        {{ form.hidden_tag() }}
+<div class="form-row">
+                            <div class="form-group">
+                                {{ form.name.label(class="form-label") }}
+                                {{ form.name(class="form-input", placeholder="Nguyễn Văn A") }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.phone.label(class="form-label") }}
+                                {{ form.phone(class="form-input", placeholder="09xx xxx xxx") }}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.type.label(class="form-label") }}
+                            <div class="select-wrap">
+                                {{ form.type(class="form-input") }}
+                                <i class="fas fa-chevron-down select-arrow"></i>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                {{ form.date.label(class="form-label") }}
+                                {{ form.date(class="form-input", type="date") }}
+                            </div>
+                            <div class="form-group">
+                                {{ form.time.label(class="form-label") }}
+                                {{ form.time(class="form-input", type="time") }}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            {{ form.note.label(class="form-label") }}
+                            {{ form.note(class="form-input form-textarea", placeholder="Số người, vị trí ngồi, dịp đặc biệt...") }}
+                        </div>
+
+                        <button type="submit" class="form-submit" id="submitBtn">
+                            <span>Gửi Yêu Cầu</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="site-footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <div class="footer-logo">DEN COFFEE</div>
+                <p class="footer-tagline">Specialty coffee · Rang tay · Pha chậm</p>
+                <div class="footer-socials">
+                    <a href="https://facebook.com/@dencoffee" class="social-btn" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                    <a href="https://instagram.com/@dencoffee" class="social-btn" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    <a href="https://tiktok.com/@dencoffee" class="social-btn" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+                    <a href="https://youtube.com/@dencoffee" class="social-btn" aria-label="Youtube"><i class="fab fa-youtube"></i></a>
+
+                </div>
+            </div>
+            <div class="footer-cols">
+                <div class="footer-col">
+                    <h4 class="footer-col-title">Thực Đơn</h4>
+                    <a href="#menu">Espresso & Latte</a>
+                    <a href="#menu">Cold Brew</a>
+                    <a href="#menu">Cà Phê Trứng</a>
+                    <a href="#menu">Bánh & Ăn Nhẹ</a>
+                </div>
+                <div class="footer-col">
+                    <h4 class="footer-col-title">Liên Hệ</h4>
+                    <p>65 Hồ Hoàn Kiếm</p>
+                    <p>Thanh Xuân, Hà Nội</p>
+                    <p>0989 427 905</p>
+                    <p>daivan@dencoffee.vn</p>
+                </div>
+                <div class="footer-col">
+                    <h4 class="footer-col-title">Giờ Mở Cửa</h4>
+                    <p>Thứ 2 – Thứ 6</p>
+                    <p class="hour">07:00 – 22:00</p>
+                    <p>Thứ 7 – Chủ Nhật</p>
+                    <p class="hour">08:00 – 23:00</p>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>© 2025 DEN Coffee. All rights reserved.</span>
+            <a href="/login" class="footer-staff-link">Login</a>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/booking.js') }}"></script>
+</body>
+</html>

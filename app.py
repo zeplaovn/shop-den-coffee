@@ -1,0 +1,355 @@
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, jsonify, session
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_bcrypt import Bcrypt
+from functools import wraps
+from datetime import datetime, timedelta
+import pandas as pd
+import os
+
+# --- Flask-WTF Components ---
+from flask_wtf import FlaskForm
+from wtforms import StringField, SelectField, DateField, TimeField, TextAreaField, SubmitField, IntegerField
+from wtforms.validators import DataRequired, Length, Regexp, NumberRange, Optional
+from flask_wtf.csrf import CSRFProtect
+
+app = Flask(__name__)
+CSRFProtect(app)
+
+# --- Cấu hình hệ thống ---
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'den-coffee-6868-secret')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///coffee.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+
+db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Vui lòng đăng nhập để tiếp tục.'
+
+# --- Form Definitions ---
+class BookingForm(FlaskForm):
+    name = StringField('Họ và tên', validators=[DataRequired(), Length(min=2, max=100)])
+    phone = StringField('Số điện thoại', validators=[DataRequired(), Regexp(r'^(0|\+84)[0-9]{8,10}$')])
+    type = SelectField('Loại yêu cầu', choices=[('booking', 'Đặt bàn trước'), ('member', 'Đăng ký thành viên')])
+    date = DateField('Ngày', format='%d-%m-%Y', validators=[DataRequired()])
+    time = TimeField('Giờ', validators=[DataRequired()])
+    note = TextAreaField('Ghi chú thêm')
+    submit = SubmitField('Gửi Yêu Cầu')
+
+class MenuItemForm(FlaskForm):
+    name = StringField('Tên món', validators=[DataRequired(), Length(min=1, max=100)])
+    category = SelectField('Danh mục', choices=[('coffee', 'Cà phê'), ('cake', 'Bánh ngọt'), ('drink', 'Đồ uống khác')])
+    price = IntegerField('Giá (VNĐ)', validators=[DataRequired(), NumberRange(min=0)])
+    description = TextAreaField('Mô tả', validators=[Optional(), Length(max=255)])
+    image_url = StringField('URL hình ảnh', validators=[Optional(), Length(max=500)])
+    submit = SubmitField('Lưu')
+
+# --- Database Models ---
+class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='manager')
+
+    def set_password(self, raw_password):
+        self.password = bcrypt.generate_password_hash(raw_password).decode('utf-8')
+    def check_password(self, raw_password):
+        return bcrypt.check_password_hash(self.password, raw_password)
+
+class MenuItem(db.Model):
+    __tablename__ = 'menu_items'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(20), nullable=False, default='coffee')
+    price = db.Column(db.Integer, nullable=False)
+    description = db.Column(db.String(255))
+    image_url = db.Column(db.String(500))
+
+class Appointment(db.Model):
+    __tablename__ = 'appointments'
+    id = db.Column(db.Integer, primary_key=True)
+    customer_name = db.Column(db.String(100), nullable=False)
+    customer_phone = db.Column(db.String(20), nullable=False)
+    booking_date = db.Column(db.Date, nullable=False)
+    booking_time = db.Column(db.Time, nullable=False)
+    booking_type = db.Column(db.String(20), nullable=False)
+    note = db.Column(db.Text)
+    _is_confirmed = db.Column('is_confirmed', db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @property
+    def is_confirmed(self):
+        # SQLite returns 0/1 integers for Boolean columns.
+        # Always cast to real Python bool so Jinja rejectattr/selectattr work correctly.
+        return bool(self._is_confirmed)
+
+    @is_confirmed.setter
+    def is_confirmed(self, value):
+        self._is_confirmed = bool(value)
+
+# --- Phân quyền Decorator ---
+def role_required(*roles):
+    def decorator(f):
+        @wraps(f)
+        @login_required
+        def wrapped(*args, **kwargs):
+            if current_user.role not in roles:
+                abort(403)
+            return f(*args, **kwargs)
+        return wrapped
+    return decorator
+
+# --- Logic Hệ Thống ---
+def seed_database():
+    with app.app_context():
+        if not User.query.filter_by(username='admin').first():
+            admin = User(username='admin', role='admin')
+            admin.set_password('admin123')
+            db.session.add(admin)
+
+        if not User.query.filter_by(username='manager').first():
+            manager = User(username='manager', role='manager')
+            manager.set_password('manager123')
+            db.session.add(manager)
+
+        db.session.commit()
+
+        excel_path = os.path.join(app.root_path, 'data', 'menu.xlsx')
+        if os.path.exists(excel_path):
+            try:
+                df = pd.read_excel(excel_path)
+                db.session.query(MenuItem).delete()
+                for _, row in df.iterrows():
+                    item = MenuItem()
+                    item.name = str(row.get('name', '')).strip()
+                    item.category = str(row.get('category', 'coffee')).strip()
+                    item.price = int(row.get('price', 0))
+                    item.description = str(row.get('description', '')) if pd.notna(row.get('description')) else ''
+                    item.image_url = str(row.get('image_url', '')) if pd.notna(row.get('image_url')) else ''
+                    db.session.add(item)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print(f"Lỗi Excel: {e}")
+
+# --- Routes Khách Hàng ---
+@login_manager.user_loader
+def load_user(user_id):
+    return db.session.get(User, int(user_id))
+
+@app.route('/')
+def index():
+    form = BookingForm()
+    selected_items = session.get('cart', [])
+    if selected_items:
+        items_string = ", ".join(selected_items)
+        form.note.data = f"Món dự kiến khi đến quán: {items_string}."
+    coffees = MenuItem.query.filter_by(category='coffee').all()
+    cakes = MenuItem.query.filter_by(category='cake').all()
+    return render_template(
+        'index.html',
+        coffees=coffees,
+        cakes=cakes,
+        form=form,
+        selected_items=selected_items
+    )
+
+@app.route('/add-to-cart', methods=['POST'])
+def add_to_cart():
+    data = request.get_json()
+    item_name = data.get('name')
+    if 'cart' not in session:
+        session['cart'] = []
+    cart = session['cart']
+    if item_name not in cart:
+        cart.append(item_name)
+    session['cart'] = cart
+    session.modified = True
+    return jsonify({'status': 'success', 'message': 'Đã lưu vào danh sách mong muốn'})
+
+@app.route('/remove-from-cart', methods=['POST'])
+def remove_from_cart():
+    data = request.get_json()
+    item_name = data.get('name')
+    cart = session.get('cart', [])
+    if item_name in cart:
+        cart.remove(item_name)
+        session['cart'] = cart
+        session.modified = True
+    return jsonify({'status': 'success'})
+
+@app.route('/add_booking', methods=['POST'])
+def add_booking():
+    form = BookingForm()
+    if form.validate_on_submit():
+        if form.date.data < datetime.today().date():
+            flash('Ngày đặt bàn không hợp lệ. Vui lòng chọn từ hôm nay trở đi.', 'error')
+            return redirect(url_for('index') + '#booking')
+        new_booking = Appointment(
+            customer_name=form.name.data,
+            customer_phone=form.phone.data,
+            booking_date=form.date.data,
+            booking_time=form.time.data,
+            booking_type=form.type.data,
+            note=form.note.data
+        )
+        db.session.add(new_booking)
+        db.session.commit()
+        session.pop('cart', None)
+        flash('Đặt bàn thành công! Chúng tôi sẽ liên hệ xác nhận sớm nhất.', 'success')
+    else:
+        flash('Thông tin không hợp lệ. Vui lòng kiểm tra lại.', 'error')
+    return redirect(url_for('index') + '#booking')
+
+# --- Routes Quản Lý ---
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        user = User.query.filter_by(username=request.form.get('username')).first()
+        if user and user.check_password(request.form.get('password')):
+            login_user(user)
+            return redirect(url_for('admin_dashboard') if user.role == 'admin' else url_for('manager_dashboard'))
+        flash('Sai thông tin đăng nhập.', 'error')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+# --- Dashboard cho Admin ---
+@app.route('/admin')
+@role_required('admin')
+def admin_dashboard():
+    bookings = Appointment.query.order_by(Appointment.created_at.desc()).all()
+    menu_items = MenuItem.query.order_by(MenuItem.category, MenuItem.name).all()
+    form = MenuItemForm()
+    return render_template('admin.html', bookings=bookings, menu_items=menu_items, form=form)
+
+# --- Dashboard cho Manager ---
+@app.route('/manager')
+@role_required('manager', 'admin')
+def manager_dashboard():
+    menu = MenuItem.query.all()
+    bookings = Appointment.query.order_by(Appointment.booking_date.asc(), Appointment.booking_time.asc()).all()
+    return render_template('manager.html', menu=menu, bookings=bookings)
+
+# --- Xác nhận đặt bàn ---
+@app.route('/confirm_booking/<int:id>', methods=['POST'])
+@role_required('admin', 'manager')
+def confirm_booking(id):
+    booking = db.session.get(Appointment, id)
+    if booking:
+        booking.is_confirmed = True  # noqa: SQLite stores as 1, cast explicitly
+        db.session.commit()
+        flash(f'Đã xác nhận đơn của {booking.customer_name}.', 'success')
+    else:
+        flash('Không tìm thấy đặt bàn.', 'error')
+    return redirect(request.referrer or url_for('manager_dashboard'))
+
+# --- Xóa đặt bàn (chỉ Admin) ---
+@app.route('/delete_booking/<int:id>', methods=['POST'])
+@role_required('admin')
+def delete_booking(id):
+    booking = db.session.get(Appointment, id)
+    if booking:
+        db.session.delete(booking)
+        db.session.commit()
+        flash(f'Đã xoá đơn của {booking.customer_name}.', 'success')
+    else:
+        flash('Không tìm thấy đặt bàn.', 'error')
+    return redirect(request.referrer or url_for('admin_dashboard'))
+
+# --- Manager hủy đặt bàn ---
+@app.route('/cancel_booking/<int:id>', methods=['POST'])
+@role_required('manager', 'admin')
+def cancel_booking(id):
+    booking = db.session.get(Appointment, id)
+    if booking:
+        if booking.is_confirmed:
+            flash('Không thể hủy đơn đã xác nhận. Liên hệ Admin để xóa.', 'error')
+        else:
+            db.session.delete(booking)
+            db.session.commit()
+            flash(f'Đã hủy đơn của {booking.customer_name}.', 'success')
+    else:
+        flash('Không tìm thấy đặt bàn.', 'error')
+    return redirect(request.referrer or url_for('manager_dashboard'))
+
+# ─────────────────────────────────────────
+# Menu CRUD (chỉ Admin)
+# ─────────────────────────────────────────
+
+@app.route('/admin/menu/add', methods=['POST'])
+@role_required('admin')
+def add_menu_item():
+    form = MenuItemForm()
+    if form.validate_on_submit():
+        item = MenuItem(
+            name=form.name.data.strip(),
+            category=form.category.data,
+            price=form.price.data,
+            description=form.description.data.strip() if form.description.data else '',
+            image_url=form.image_url.data.strip() if form.image_url.data else ''
+        )
+        db.session.add(item)
+        db.session.commit()
+        flash(f'Đã thêm món "{item.name}" vào thực đơn.', 'success')
+    else:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'Lỗi [{field}]: {error}', 'error')
+    return redirect(url_for('admin_dashboard') + '#menu')
+
+@app.route('/admin/menu/edit/<int:id>', methods=['POST'])
+@role_required('admin')
+def edit_menu_item(id):
+    item = db.session.get(MenuItem, id)
+    if not item:
+        flash('Không tìm thấy món.', 'error')
+        return redirect(url_for('admin_dashboard') + '#menu')
+    form = MenuItemForm()
+    if form.validate_on_submit():
+        item.name = form.name.data.strip()
+        item.category = form.category.data
+        item.price = form.price.data
+        item.description = form.description.data.strip() if form.description.data else ''
+        item.image_url = form.image_url.data.strip() if form.image_url.data else ''
+        db.session.commit()
+        flash(f'Đã cập nhật món "{item.name}".', 'success')
+    else:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'Lỗi [{field}]: {error}', 'error')
+    return redirect(url_for('admin_dashboard') + '#menu')
+
+@app.route('/admin/menu/delete/<int:id>', methods=['POST'])
+@role_required('admin')
+def delete_menu_item(id):
+    item = db.session.get(MenuItem, id)
+    if item:
+        name = item.name
+        db.session.delete(item)
+        db.session.commit()
+        flash(f'Đã xoá món "{name}".', 'success')
+    else:
+        flash('Không tìm thấy món.', 'error')
+    return redirect(url_for('admin_dashboard') + '#menu')
+
+# --- Trang lỗi ---
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template('403.html'), 403
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template('404.html'), 404
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+        seed_database()
+    app.run(host='0.0.0.0', port=2005)
