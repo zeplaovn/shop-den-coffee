@@ -1,9 +1,9 @@
 # Đen Coffee - Management System
 
-Welcome to the official repository of **Đen Coffee**. This project is a comprehensive web application designed to streamline coffee shop operations, from customer bookings to menu management and administrative control.
+Welcome to the official repository of **Đen Coffee**. This project is a comprehensive web application designed to streamline coffee shop operations, from customer bookings to menu management and admi[...]
 
 ## ☕ About Đen Coffee
-Đen Coffee is dedicated to providing a premium coffee experience. Our platform serves as a bridge between our passion for brewing and our customers, offering a seamless way to explore our offerings and secure a spot at our shop.
+Đen Coffee is dedicated to providing a premium coffee experience. Our platform serves as a bridge between our passion for brewing and our customers, offering a seamless way to explore our offerings a[...]
 
 ## 🛠️ Key Services & Features
 The application provides a robust set of features for both customers and staff:
@@ -31,7 +31,7 @@ The application provides a robust set of features for both customers and staff:
 We value your feedback and inquiries. Whether you are a customer, a developer, or a potential partner, feel free to reach out to us:
 
 *   **Email:** [zeplaovn@proton.me](mailto:zeplaovn@proton.me)
-*   **Store Address:** *[65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội](65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội)*
+*   **Store Address:** [65 Hồ Hoàn Kiếm, Thanh Xuân, Hà Nội](https://www.google.com/maps/search/65+H%E1%BB%93+Ho%C3%A0n+Ki%E1%BA%BFm,+Thanh+Xu%C3%A2n,+H%C3%A0+N%E1%BB%99i)
 
 ## 🛠️ Installation & Setup
 1.  **Clone the repository:**
