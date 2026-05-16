@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, abort, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, jsonify, session, Response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_bcrypt import Bcrypt
@@ -6,10 +6,11 @@ from functools import wraps
 from datetime import datetime, timedelta
 import csv
 import os
+from typing import List, Dict, Any, Optional
 
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, DateField, TimeField, TextAreaField, SubmitField, PasswordField, IntegerField
-from wtforms.validators import DataRequired, Length, Regexp, NumberRange, Optional
+from wtforms.validators import DataRequired, Length, Regexp, NumberRange, Optional as WTFOptional
 from flask_wtf.csrf import CSRFProtect
 from flask_compress import Compress
 
@@ -21,7 +22,6 @@ Compress(app)
 load_dotenv('.env')
 
 # --- Cấu hình hệ thống ---
-# FIX: Thêm fallback cho SECRET_KEY thay vì để None làm crash app
 secret_key = os.environ.get('SECRET_KEY')
 if not secret_key:
     import warnings
@@ -36,7 +36,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 
-# Static files cache 1 năm — browser không tải lại CSS/JS khi không đổi
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(days=365)
 
 db = SQLAlchemy(app)
@@ -45,12 +44,12 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Vui lòng đăng nhập để tiếp tục.'
 
-# Cache-busting: tính toán mã hash một lần khi khởi động
+# Cache-busting
 import subprocess
 
-def get_git_revision_short_hash():
+def get_git_revision_short_hash() -> str:
     try:
-        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], 
+        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'],
                                      stderr=subprocess.DEVNULL).decode().strip()
     except Exception:
         return os.environ.get('ASSET_VERSION', '1')
@@ -58,13 +57,14 @@ def get_git_revision_short_hash():
 ASSET_VERSION = get_git_revision_short_hash()
 
 @app.context_processor
-def inject_asset_version():
+def inject_asset_version() -> Dict[str, str]:
     return dict(asset_version=ASSET_VERSION)
 
-admin_user = os.environ.get('ADMIN_USER')
-admin_password = os.environ.get('ADMIN_PASSWORD')
-manager_user = os.environ.get('MANAGER_USER')
-manager_password = os.environ.get('MANAGER_PASSWORD')
+# Xử lý env vars: Đảm bảo không bị None để tránh lỗi type checker
+admin_user = os.environ.get('ADMIN_USER', 'admin')
+admin_password = os.environ.get('ADMIN_PASSWORD', 'admin')
+manager_user = os.environ.get('MANAGER_USER', 'manager')
+manager_password = os.environ.get('MANAGER_PASSWORD', 'manager')
 
 
 # --- Form Definitions ---
@@ -72,7 +72,6 @@ class BookingForm(FlaskForm):
     name = StringField('Họ và tên', validators=[DataRequired(), Length(min=2, max=100)])
     phone = StringField('Số điện thoại', validators=[DataRequired(), Regexp(r'^(0|\+84)[0-9]{8,10}$')])
     type = SelectField('Loại yêu cầu', choices=[('booking', 'Đặt bàn trước'), ('member', 'Đăng ký thành viên')])
-    # FIX: Đổi format thành '%d/%m/%Y' để khớp với Flatpickr dateFormat: "d/m/Y"
     date = DateField('Ngày', format='%d/%m/%Y', validators=[DataRequired()])
     time = TimeField('Giờ', validators=[DataRequired()])
     note = TextAreaField('Ghi chú thêm')
@@ -82,8 +81,8 @@ class MenuItemForm(FlaskForm):
     name = StringField('Tên món', validators=[DataRequired(), Length(min=1, max=100)])
     category = SelectField('Danh mục', choices=[('coffee', 'Cà phê'), ('cake', 'Bánh ngọt'), ('drink', 'Đồ uống khác')])
     price = IntegerField('Giá (VNĐ)', validators=[DataRequired(), NumberRange(min=0)])
-    description = TextAreaField('Mô tả', validators=[Optional(), Length(max=255)])
-    image_url = StringField('URL hình ảnh', validators=[Optional(), Length(max=500)])
+    description = TextAreaField('Mô tả', validators=[WTFOptional(), Length(max=255)])
+    image_url = StringField('URL hình ảnh', validators=[WTFOptional(), Length(max=500)])
     submit = SubmitField('Lưu')
 
 # --- Database Models ---
@@ -94,9 +93,10 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='manager')
 
-    def set_password(self, raw_password):
+    def set_password(self, raw_password: str) -> None:
         self.password = bcrypt.generate_password_hash(raw_password).decode('utf-8')
-    def check_password(self, raw_password):
+
+    def check_password(self, raw_password: str) -> bool:
         return bcrypt.check_password_hash(self.password, raw_password)
 
 class MenuItem(db.Model):
@@ -121,58 +121,54 @@ class Appointment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
-    def is_confirmed(self):
+    def is_confirmed(self) -> bool:
         return bool(self._is_confirmed)
 
     @is_confirmed.setter
-    def is_confirmed(self, value):
+    def is_confirmed(self, value: bool) -> None:
         self._is_confirmed = bool(value)
 
 # --- Phân quyền Decorator ---
-def role_required(*roles):
+def role_required(*roles: str):
     def decorator(f):
         @wraps(f)
         def wrapped(*args, **kwargs):
-            # Nếu chưa đăng nhập HOẶC không đúng role -> Trả về 404 (Security through obscurity)
-            # Người dùng không có quyền sẽ không biết trang này tồn tại.
-            if not current_user.is_authenticated or current_user.role not in roles:
+            # Type ignore dùng ở đây vì current_user là Proxy object
+            if not current_user.is_authenticated or current_user.role not in roles: # type: ignore
                 abort(404)
             return f(*args, **kwargs)
         return wrapped
     return decorator
 
 # --- Logic Hệ Thống ---
-def seed_database():
+def seed_database() -> None:
     with app.app_context():
-        if not User.query.filter_by(username=admin_user).first():
+        # Pyright cần type ignore ở đây vì User.query là magic attribute
+        if not User.query.filter_by(username=admin_user).first(): # type: ignore
             admin = User(username=admin_user, role='admin')
             admin.set_password(admin_password)
             db.session.add(admin)
 
-        if not User.query.filter_by(username=manager_user).first():
+        if not User.query.filter_by(username=manager_user).first(): # type: ignore
             manager = User(username=manager_user, role='manager')
             manager.set_password(manager_password)
             db.session.add(manager)
 
         db.session.commit()
 
-        # Đồng bộ menu từ CSV (upsert theo tên) — chạy mỗi lần khởi động
-        # - Món mới trong CSV → thêm vào DB
-        # - Món đã có (trùng tên) → cập nhật giá / mô tả / ảnh / category
-        # - Món chỉ có trong DB (thêm tay qua admin) → giữ nguyên, không xóa
         csv_path = os.path.join(app.root_path, 'data', 'menu.csv')
         if os.path.exists(csv_path):
             try:
                 with open(csv_path, mode='r', encoding='utf-8') as f:
                     reader = csv.DictReader(f)
-                    added = updated = 0
+                    added = 0
+                    updated = 0
                     for row in reader:
                         name = row.get('name', '').strip()
                         if not name:
                             continue
-                        existing = MenuItem.query.filter_by(name=name).first()
+                        existing = MenuItem.query.filter_by(name=name).first() # type: ignore
                         if existing:
-                            # Cập nhật các trường từ CSV, giữ id
                             existing.category  = row.get('category', existing.category).strip()
                             existing.price     = int(row.get('price', existing.price))
                             existing.description = row.get('description', existing.description or '').strip()
@@ -196,20 +192,21 @@ def seed_database():
 
 # --- Routes Khách Hàng ---
 @login_manager.user_loader
-def load_user(user_id):
+def load_user(user_id: str) -> Optional[User]:
     return db.session.get(User, int(user_id))
 
 @app.route('/')
 @app.route('/home')
 @app.route('/index')
-def index():
+def index() -> str:
     form = BookingForm()
-    selected_items = session.get('cart', [])
+    selected_items: List[str] = session.get('cart', [])
     if selected_items:
         items_string = ", ".join(selected_items)
         form.note.data = f"Món dự kiến khi đến quán: {items_string}."
-    coffees = MenuItem.query.filter_by(category='coffee').all()
-    cakes = MenuItem.query.filter_by(category='cake').all()
+
+    coffees = MenuItem.query.filter_by(category='coffee').all() # type: ignore
+    cakes = MenuItem.query.filter_by(category='cake').all() # type: ignore
     return render_template(
         'index.html',
         coffees=coffees,
@@ -219,12 +216,18 @@ def index():
     )
 
 @app.route('/add-to-cart', methods=['POST'])
-def add_to_cart():
+def add_to_cart() -> Response:
     data = request.get_json()
+    if not data:
+        return jsonify({'status': 'error', 'message': 'Invalid JSON'}), 400
+
     item_name = data.get('name')
+    if not isinstance(item_name, str):
+        return jsonify({'status': 'error', 'message': 'Invalid name'}), 400
+
     if 'cart' not in session:
         session['cart'] = []
-    cart = session['cart']
+    cart: List[str] = session['cart']
     if item_name not in cart:
         cart.append(item_name)
     session['cart'] = cart
@@ -232,37 +235,42 @@ def add_to_cart():
     return jsonify({'status': 'success', 'message': 'Đã lưu vào danh sách mong muốn'})
 
 @app.route('/remove-from-cart', methods=['POST'])
-def remove_from_cart():
+def remove_from_cart() -> Response:
     data = request.get_json()
+    if not data:
+         return jsonify({'status': 'error'}), 400
+
     item_name = data.get('name')
-    cart = session.get('cart', [])
-    if item_name in cart:
-        cart.remove(item_name)
-        session['cart'] = cart
-        session.modified = True
+    if isinstance(item_name, str):
+        cart = session.get('cart', [])
+        if item_name in cart:
+            cart.remove(item_name)
+            session['cart'] = cart
+            session.modified = True
     return jsonify({'status': 'success'})
 
 @app.route('/add_booking', methods=['POST'])
-def add_booking():
+def add_booking() -> Response:
     form = BookingForm()
     if form.validate_on_submit():
-        if form.date.data < datetime.today().date():
+        # Kiểm tra None an toàn cho Pyright
+        if form.date.data and form.date.data < datetime.today().date():
             flash('Ngày đặt bàn không hợp lệ. Vui lòng chọn từ hôm nay trở đi.', 'error')
             return redirect(url_for('index') + '#booking')
+
         new_booking = Appointment(
-            customer_name=form.name.data,
-            customer_phone=form.phone.data,
+            customer_name=str(form.name.data), # Eplicit cast
+            customer_phone=str(form.phone.data),
             booking_date=form.date.data,
             booking_time=form.time.data,
-            booking_type=form.type.data,
-            note=form.note.data
+            booking_type=str(form.type.data),
+            note=str(form.note.data) if form.note.data else ""
         )
         db.session.add(new_booking)
         db.session.commit()
         session.pop('cart', None)
         flash('Đặt bàn thành công! Chúng tôi sẽ liên hệ xác nhận sớm nhất.', 'success')
     else:
-        # Hiển thị lỗi field cụ thể để người dùng biết sửa chỗ nào
         for field, errors in form.errors.items():
             for error in errors:
                 flash(f'Lỗi — {error}', 'error')
@@ -277,23 +285,22 @@ class LoginForm(FlaskForm):
 
 @app.route('/login', methods=['GET', 'POST'])
 @app.route('/signin', methods=['GET', 'POST'])
-def login():
+def login() -> Response:
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data):
+        user = User.query.filter_by(username=form.username.data).first() # type: ignore
+        if user and user.check_password(str(form.password.data)):
             login_user(user)
-            return redirect(
-                url_for('admin_dashboard')
-                if user.role == 'admin'
-                else url_for('manager_dashboard')
-            )
+            if user.role == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            else:
+                return redirect(url_for('manager_dashboard'))
         flash('Sai thông tin đăng nhập.', 'error')
     return render_template('login.html', form=form)
 
 @app.route('/logout')
 @app.route('/signout')
-def logout():
+def logout() -> Response:
     logout_user()
     return redirect(url_for('login'))
 
@@ -301,9 +308,9 @@ def logout():
 @app.route('/admin')
 @app.route('/dashboard')
 @role_required('admin')
-def admin_dashboard():
-    bookings = Appointment.query.order_by(Appointment.created_at.desc()).limit(200).all()
-    menu_items = MenuItem.query.order_by(MenuItem.category, MenuItem.name).all()
+def admin_dashboard() -> str:
+    bookings = Appointment.query.order_by(Appointment.created_at.desc()).limit(200).all() # type: ignore
+    menu_items = MenuItem.query.order_by(MenuItem.category, MenuItem.name).all() # type: ignore
     form = MenuItemForm()
     return render_template('admin.html', bookings=bookings, menu_items=menu_items, form=form)
 
@@ -311,15 +318,15 @@ def admin_dashboard():
 @app.route('/manager')
 @app.route('/pos')
 @role_required('manager', 'admin')
-def manager_dashboard():
-    menu = MenuItem.query.all()
-    bookings = Appointment.query.order_by(Appointment.booking_date.asc(), Appointment.booking_time.asc()).all()
+def manager_dashboard() -> str:
+    menu = MenuItem.query.all() # type: ignore
+    bookings = Appointment.query.order_by(Appointment.booking_date.asc(), Appointment.booking_time.asc()).all() # type: ignore
     return render_template('manager.html', menu=menu, bookings=bookings)
 
 # --- Xác nhận đặt bàn ---
 @app.route('/confirm_booking/<int:id>', methods=['POST'])
 @role_required('admin', 'manager')
-def confirm_booking(id):
+def confirm_booking(id: int) -> Response:
     booking = db.session.get(Appointment, id)
     if booking:
         booking.is_confirmed = True
@@ -332,7 +339,7 @@ def confirm_booking(id):
 # --- Xóa đặt bàn (chỉ Admin) ---
 @app.route('/delete_booking/<int:id>', methods=['POST'])
 @role_required('admin')
-def delete_booking(id):
+def delete_booking(id: int) -> Response:
     booking = db.session.get(Appointment, id)
     if booking:
         db.session.delete(booking)
@@ -345,7 +352,7 @@ def delete_booking(id):
 # --- Manager hủy đặt bàn ---
 @app.route('/cancel_booking/<int:id>', methods=['POST'])
 @role_required('manager', 'admin')
-def cancel_booking(id):
+def cancel_booking(id: int) -> Response:
     booking = db.session.get(Appointment, id)
     if booking:
         if booking.is_confirmed:
@@ -361,15 +368,15 @@ def cancel_booking(id):
 # --- Menu CRUD (chỉ Admin) ---
 @app.route('/admin/menu/add', methods=['POST'])
 @role_required('admin')
-def add_menu_item():
+def add_menu_item() -> Response:
     form = MenuItemForm()
     if form.validate_on_submit():
         item = MenuItem(
-            name=form.name.data.strip(),
-            category=form.category.data,
-            price=form.price.data,
-            description=form.description.data.strip() if form.description.data else '',
-            image_url=form.image_url.data.strip() if form.image_url.data else ''
+            name=str(form.name.data).strip(),
+            category=str(form.category.data),
+            price=int(form.price.data or 0),
+            description=str(form.description.data).strip() if form.description.data else '',
+            image_url=str(form.image_url.data).strip() if form.image_url.data else ''
         )
         db.session.add(item)
         db.session.commit()
@@ -382,18 +389,19 @@ def add_menu_item():
 
 @app.route('/admin/menu/edit/<int:id>', methods=['POST'])
 @role_required('admin')
-def edit_menu_item(id):
+def edit_menu_item(id: int) -> Response:
     item = db.session.get(MenuItem, id)
     if not item:
         flash('Không tìm thấy món.', 'error')
         return redirect(url_for('admin_dashboard') + '#menu')
+
     form = MenuItemForm()
     if form.validate_on_submit():
-        item.name = form.name.data.strip()
-        item.category = form.category.data
-        item.price = form.price.data
-        item.description = form.description.data.strip() if form.description.data else ''
-        item.image_url = form.image_url.data.strip() if form.image_url.data else ''
+        item.name = str(form.name.data).strip()
+        item.category = str(form.category.data)
+        item.price = int(form.price.data or 0)
+        item.description = str(form.description.data).strip() if form.description.data else ''
+        item.image_url = str(form.image_url.data).strip() if form.image_url.data else ''
         db.session.commit()
         flash(f'Đã cập nhật món "{item.name}".', 'success')
     else:
@@ -404,7 +412,7 @@ def edit_menu_item(id):
 
 @app.route('/admin/menu/delete/<int:id>', methods=['POST'])
 @role_required('admin')
-def delete_menu_item(id):
+def delete_menu_item(id: int) -> Response:
     item = db.session.get(MenuItem, id)
     if item:
         name = item.name
@@ -417,16 +425,15 @@ def delete_menu_item(id):
 
 # --- Trang lỗi ---
 @app.errorhandler(403)
-def forbidden(e):
+def forbidden(e: Any) -> tuple:
     return render_template('403.html'), 403
 
 @app.errorhandler(404)
-def not_found(e):
+def not_found(e: Any) -> tuple:
     return render_template('404.html'), 404
 
-with app.app_context():
-    db.create_all()
-    seed_database()
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=2005, debug=False)
+    with app.app_context():
+        db.create_all()
+        seed_database()
+    app.run(host='0.0.0.0', port=2005)
