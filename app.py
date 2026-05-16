@@ -183,6 +183,7 @@ def load_user(user_id):
 
 @app.route('/')
 @app.route('/home')
+@app.route('/index')
 def index():
     form = BookingForm()
     selected_items = session.get('cart', [])
@@ -257,6 +258,7 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Đăng Nhập →')
 
 @app.route('/login', methods=['GET', 'POST'])
+@app.route('/signin', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
@@ -272,12 +274,14 @@ def login():
     return render_template('login.html', form=form)
 
 @app.route('/logout')
+@app.route('/signout')
 def logout():
     logout_user()
     return redirect(url_for('login'))
 
 # --- Dashboard cho Admin ---
 @app.route('/admin')
+@app.route('/dashboard')
 @role_required('admin')
 def admin_dashboard():
     # FIX: Giới hạn 200 bản ghi gần nhất, tránh tải toàn bộ DB vào RAM
@@ -288,6 +292,7 @@ def admin_dashboard():
 
 # --- Dashboard cho Manager ---
 @app.route('/manager')
+@app.route('/pos')
 @role_required('manager', 'admin')
 def manager_dashboard():
     menu = MenuItem.query.all()
