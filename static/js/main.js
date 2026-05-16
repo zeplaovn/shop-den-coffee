@@ -80,6 +80,27 @@ const revealObs = new IntersectionObserver((entries) => {
 
 document.querySelectorAll('.reveal-up, .reveal-left, .reveal-right, .menu-card').forEach(el => revealObs.observe(el));
 
+/* ── Mobile Menu Toggle ── */
+const hamburger = document.getElementById('hamburger');
+const mobileMenu = document.getElementById('mobileMenu');
+const mobileLinks = document.querySelectorAll('.mobile-link');
+
+if (hamburger && mobileMenu) {
+    hamburger.addEventListener('click', () => {
+        hamburger.classList.toggle('active');
+        mobileMenu.classList.toggle('open');
+        document.body.style.overflow = mobileMenu.classList.contains('open') ? 'hidden' : '';
+    });
+
+    mobileLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            hamburger.classList.remove('active');
+            mobileMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        });
+    });
+}
+
 /* ── Loader & Form UX ── */
 window.addEventListener('load', () => {
     const loader = document.getElementById('loader');

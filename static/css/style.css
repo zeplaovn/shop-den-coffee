@@ -329,6 +329,19 @@ body {
     height: 1.5px;
     background: var(--white);
     transition: all 0.3s;
+    transform-origin: center;
+}
+
+.hamburger.active span:nth-child(1) {
+    transform: translateY(6.5px) rotate(45deg);
+}
+
+.hamburger.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+    transform: translateY(-6.5px) rotate(-45deg);
 }
 
 .nav-fixed.scrolled .hamburger span {
@@ -362,11 +375,24 @@ body {
     color: var(--cream);
     text-decoration: none;
     letter-spacing: 0.1em;
-    transition: color 0.3s;
+    transition: all 0.3s;
+    opacity: 0;
+    transform: translateY(20px);
 }
+
+.mobile-menu.open .mobile-link {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mobile-menu.open .mobile-link:nth-child(1) { transition-delay: 0.1s; }
+.mobile-menu.open .mobile-link:nth-child(2) { transition-delay: 0.2s; }
+.mobile-menu.open .mobile-link:nth-child(3) { transition-delay: 0.3s; }
+.mobile-menu.open .mobile-link:nth-child(4) { transition-delay: 0.4s; }
 
 .mobile-link:hover {
     color: var(--tan);
+    letter-spacing: 0.15em;
 }
 
 /* ============ HERO ============ */
