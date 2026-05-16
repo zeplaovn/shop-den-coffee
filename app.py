@@ -4,7 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from flask_bcrypt import Bcrypt
 from functools import wraps
 from datetime import datetime, timedelta
-import pandas as pd
+import csv
 import os
 
 from flask_wtf import FlaskForm
@@ -155,27 +155,26 @@ def seed_database():
 
         db.session.commit()
 
-        # FIX: Chỉ import từ Excel khi bảng menu_items đang trống.
-        # Trước đây luôn xóa và import lại mỗi khi restart,
-        # làm mất mọi thay đổi admin đã thực hiện qua CRUD.
+        # Import từ CSV khi bảng menu_items đang trống
         if MenuItem.query.count() == 0:
-            excel_path = os.path.join(app.root_path, 'data', 'menu.xlsx')
-            if os.path.exists(excel_path):
+            csv_path = os.path.join(app.root_path, 'data', 'menu.csv')
+            if os.path.exists(csv_path):
                 try:
-                    df = pd.read_excel(excel_path)
-                    for _, row in df.iterrows():
-                        item = MenuItem()
-                        item.name = str(row.get('name', '')).strip()
-                        item.category = str(row.get('category', 'coffee')).strip()
-                        item.price = int(row.get('price', 0))
-                        item.description = str(row.get('description', '')) if pd.notna(row.get('description')) else ''
-                        item.image_url = str(row.get('image_url', '')) if pd.notna(row.get('image_url')) else ''
-                        db.session.add(item)
+                    with open(csv_path, mode='r', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            item = MenuItem()
+                            item.name = row.get('name', '').strip()
+                            item.category = row.get('category', 'coffee').strip()
+                            item.price = int(row.get('price', 0))
+                            item.description = row.get('description', '').strip()
+                            item.image_url = row.get('image_url', '').strip()
+                            db.session.add(item)
                     db.session.commit()
-                    print(f"Đã import menu từ Excel.")
+                    print(f"Đã import menu từ file CSV thành công.")
                 except Exception as e:
                     db.session.rollback()
-                    print(f"Lỗi Excel: {e}")
+                    print(f"Lỗi khi đọc file CSV: {e}")
 
 # --- Routes Khách Hàng ---
 @login_manager.user_loader
