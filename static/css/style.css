@@ -36,7 +36,7 @@ body {
     background: var(--light);
     color: var(--coffee);
     overflow-x: hidden;
-    cursor: none;
+    cursor: auto;
 }
 
 /* ============ LOADER ============ */
@@ -105,59 +105,6 @@ body {
         opacity: 0.4;
     }
 }
-
-/* ============ CUSTOM CURSOR ============ */
-.cursor, .cursor-dot {
-    position: fixed;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-    z-index: 9999;
-    will-change: transform;
-    /* Sử dụng biến CSS để GPU tối ưu hóa */
-    transform: translate3d(var(--mouse-x, -100px), var(--mouse-y, -100px), 0);
-    transition: opacity 0.3s ease, border-color 0.3s, background 0.3s, width 0.3s, height 0.3s;
-}
-
-.cursor {
-    width: 36px;
-    height: 36px;
-    border: 1.5px solid var(--gold);
-    border-radius: 50%;
-    /* Căn giữa: lấy width chia 2 */
-    margin-left: -18px;
-    margin-top: -18px;
-}
-
-.cursor-dot {
-    width: 6px;
-    height: 6px;
-    background: var(--gold);
-    border-radius: 50%;
-    /* Căn giữa: lấy width chia 2 */
-    margin-left: -3px;
-    margin-top: -3px;
-}
-
-/* Hiệu ứng phóng to khi hover vẫn mượt mà nhờ transition width/height hoặc scale */
-.cursor.hover {
-    width: 50px;
-    height: 50px;
-    margin-left: -25px;
-    margin-top: -25px;
-    background: rgba(154, 124, 78, 0.1);
-}
-
-/* Ẩn cursor tùy chỉnh trên thiết bị cảm ứng hoặc khi không hỗ trợ hover */
-@media (hover: none) or (pointer: coarse) {
-    .cursor, .cursor-dot {
-        display: none !important;
-    }
-    body {
-        cursor: auto !important;
-    }
-}
-
 
 /* ============ FLASH MESSAGES (public pages) ============ */
 .flash-banner {

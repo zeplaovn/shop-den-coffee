@@ -2,18 +2,6 @@
    DEN COFFEE — main.js (Performance Optimized)
    ============================================ */
 
-/* ── Custom Cursor ── */
-const cursor = document.getElementById('cursor');
-const cursorDot = document.getElementById('cursorDot');
-
-if (cursor && cursorDot) {
-    document.addEventListener('mousemove', (e) => {
-        // Sử dụng CSS variables để GPU xử lý việc di chuyển mượt mà hơn
-        document.documentElement.style.setProperty('--mouse-x', e.clientX + 'px');
-        document.documentElement.style.setProperty('--mouse-y', e.clientY + 'px');
-    }, { passive: true });
-}
-
 /* ── Navbar & Hero Parallax ── */
 const navbar = document.getElementById('navbar');
 const heroContent = document.getElementById('heroContent');
