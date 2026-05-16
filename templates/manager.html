@@ -26,9 +26,43 @@
             </a>
             <div class="nav-section-label">Liên Kết</div>
             {% if current_user.role == 'admin' %}
-            <a href="/admin" class="nav-item"><i class="fas fa-chart-pie"></i> Admin Dashboard</a>
+            <a href="/admin#menu" class="nav-item"><i class="fas fa-chart-pie"></i> Admin Dashboard</a>
             {% endif %}
             <a href="/" target="_blank" class="nav-item"><i class="fas fa-external-link-alt"></i> Trang Khách Hàng</a>
+
+            <!-- ── Menu quick-stats widget ── -->
+            <div class="sidebar-menu-widget">
+                <div class="smw-header">
+                    <i class="fas fa-mug-hot"></i>
+                    <span>Thực Đơn</span>
+                    <span class="smw-total">{{ menu | length }} món</span>
+                </div>
+                <div class="smw-cats">
+                    {% set coffee_n = menu | selectattr('category','equalto','coffee') | list | length %}
+                    {% set cake_n   = menu | selectattr('category','equalto','cake')   | list | length %}
+                    {% set drink_n  = menu | selectattr('category','equalto','drink')  | list | length %}
+                    <div class="smw-cat">
+                        <span class="smw-dot smw-dot-amber"></span>
+                        <span class="smw-cat-label">Cà phê</span>
+                        <span class="smw-cat-val">{{ coffee_n }}</span>
+                    </div>
+                    <div class="smw-cat">
+                        <span class="smw-dot smw-dot-green"></span>
+                        <span class="smw-cat-label">Bánh</span>
+                        <span class="smw-cat-val">{{ cake_n }}</span>
+                    </div>
+                    <div class="smw-cat">
+                        <span class="smw-dot smw-dot-blue"></span>
+                        <span class="smw-cat-label">Đồ uống</span>
+                        <span class="smw-cat-val">{{ drink_n }}</span>
+                    </div>
+                </div>
+                {% if current_user.role == 'admin' %}
+                <a href="/admin#menu" class="smw-manage-btn">
+                    <i class="fas fa-pen"></i> Quản lý thực đơn
+                </a>
+                {% endif %}
+            </div>
         </nav>
         <div class="sidebar-footer">
             <div class="user-info">
@@ -265,9 +299,6 @@
             {% endfor %}
         ];
     </script>
-
-    <!-- BUG FIX #1: pos.js loads AFTER the menuItems array above,
-         so renderMenu() at the bottom of pos.js runs safely. -->
     <script src="{{ url_for('static', filename='js/pos.js') }}"></script>
 
 </body>

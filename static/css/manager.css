@@ -898,3 +898,105 @@ body {
 .modal-overlay.open {
     display: flex !important;
 }
+
+
+/* ============================================================
+   MANAGER.CSS — MENU WIDGET ADDITIONS
+   Append these rules to the existing manager.css file.
+   ============================================================ */
+
+/* ── Sidebar menu stats widget ── */
+.sidebar-menu-widget {
+    margin: 1rem 0.875rem 0;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.875rem 1rem;
+}
+
+.smw-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.smw-header i {
+    font-size: 0.65rem;
+    opacity: 0.7;
+}
+
+.smw-total {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    background: rgba(196, 169, 122, 0.2);
+    color: var(--tan);
+    padding: 1px 7px;
+    border-radius: 100px;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.smw-cats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+
+.smw-cat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.smw-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.smw-dot-amber { background: #f59e0b; }
+.smw-dot-green { background: #34d399; }
+.smw-dot-blue  { background: #60a5fa; }
+
+.smw-cat-label { flex: 1; }
+
+.smw-cat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.smw-manage-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 7px;
+    background: rgba(196, 169, 122, 0.15);
+    border: 1px solid rgba(196, 169, 122, 0.25);
+    color: var(--tan);
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    letter-spacing: 0.02em;
+}
+.smw-manage-btn:hover {
+    background: rgba(196, 169, 122, 0.28);
+    color: var(--cream);
+    border-color: rgba(196, 169, 122, 0.45);
+}

@@ -4,9 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ĐEN Coffee | Hương Vị Từ Tâm</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Thêm preconnect để browser kết nối sớm -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Chỉ load weight thực sự dùng -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=DM+Sans:wght@400;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"> -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -166,8 +172,8 @@
             <div class="menu-card reveal-up" style="animation-delay: {{ loop.index * 0.05 }}s"
                  data-category="coffee">
                 <div class="card-img-wrap">
-                    <img src="{{ item.image_url }}" alt="{{ item.name }}" class="card-img" loading="lazy">
-                    <!-- BUG FIX #1: Removed duplicate overlay. Now uses one consistent card-order-btn. -->
+                    <!-- <img src="{{ item.image_url }}" loading="lazy" decoding="async" alt="{{ item.name }}"> -->
+                    <img src="{{ item.image_url }}" alt="{{ item.name }}" class="card-img" loading="lazy" decoding="async">
                     <div class="card-overlay">
                         <button class="card-order-btn" data-name="{{ item.name }}">Chọn món này</button>
                     </div>
@@ -247,7 +253,7 @@
 
                     <form action="{{ url_for('add_booking') }}" method="POST" class="booking-form" id="bookingForm">
                         {{ form.hidden_tag() }}
-<div class="form-row">
+                        <div class="form-row">
                             <div class="form-group">
                                 {{ form.name.label(class="form-label") }}
                                 {{ form.name(class="form-input", placeholder="Nguyễn Văn A") }}
@@ -269,11 +275,11 @@
                         <div class="form-row">
                             <div class="form-group">
                                 {{ form.date.label(class="form-label") }}
-                                {{ form.date(class="form-input", type="date") }}
+                                {{ form.date(class="form-input", id="datePicker", placeholder="dd/mm/yyyy") }}
                             </div>
                             <div class="form-group">
                                 {{ form.time.label(class="form-label") }}
-                                {{ form.time(class="form-input", type="time") }}
+                                {{ form.time(class="form-input", id="timePicker") }}
                             </div>
                         </div>
 
@@ -302,7 +308,6 @@
                     <a href="https://instagram.com/@ĐENcoffee" class="social-btn" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
                     <a href="https://tiktok.com/@ĐENcoffee" class="social-btn" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
                     <a href="https://youtube.com/@ĐENcoffee" class="social-btn" aria-label="Youtube"><i class="fab fa-youtube"></i></a>
-
                 </div>
             </div>
             <div class="footer-cols">
@@ -335,7 +340,25 @@
         </div>
     </footer>
 
+    <!-- FIX: Flatpickr JS load trước main.js và booking.js -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/vn.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/booking.js') }}"></script>
+    <script>
+        flatpickr("#datePicker", {
+            locale: "vn",
+            // FIX: Format khớp với WTForms format='%d/%m/%Y'
+            dateFormat: "d/m/Y",
+            minDate: "today"
+        });
+
+        flatpickr("#timePicker", {
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "H:i",
+            time_24hr: true
+        });
+    </script>
 </body>
 </html>

@@ -7,32 +7,58 @@ from datetime import datetime, timedelta
 import pandas as pd
 import os
 
-# --- Flask-WTF Components ---
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, DateField, TimeField, TextAreaField, SubmitField, IntegerField
+from wtforms import StringField, SelectField, DateField, TimeField, TextAreaField, SubmitField, PasswordField, IntegerField
 from wtforms.validators import DataRequired, Length, Regexp, NumberRange, Optional
 from flask_wtf.csrf import CSRFProtect
+from flask_compress import Compress
 
 from dotenv import load_dotenv
+
 app = Flask(__name__)
 CSRFProtect(app)
+Compress(app)
 load_dotenv('.env')
 
 # --- Cấu hình hệ thống ---
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+# FIX: Thêm fallback cho SECRET_KEY thay vì để None làm crash app
+secret_key = os.environ.get('SECRET_KEY')
+if not secret_key:
+    import warnings
+    warnings.warn('SECRET_KEY không được đặt trong .env — dùng fallback tạm thời. KHÔNG dùng trong production!', stacklevel=2)
+    secret_key = 'dev-fallback-key-change-in-production'
+app.config['SECRET_KEY'] = secret_key
+
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///coffee.db')
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-# app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///coffee.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+
+# Static files cache 1 năm — browser không tải lại CSS/JS khi không đổi
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(days=365)
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Vui lòng đăng nhập để tiếp tục.'
+
+# Cache-busting: inject ?v=<git_hash> vào URL static file
+# → browser biết tải lại đúng khi deploy code mới, cache lâu khi không đổi
+import subprocess
+
+@app.context_processor
+def inject_asset_version():
+    try:
+        v = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+    except Exception:
+        v = os.environ.get('ASSET_VERSION', '1')
+    return dict(asset_version=v)
 
 admin_user = os.environ.get('ADMIN_USER')
 admin_password = os.environ.get('ADMIN_PASSWORD')
@@ -45,7 +71,8 @@ class BookingForm(FlaskForm):
     name = StringField('Họ và tên', validators=[DataRequired(), Length(min=2, max=100)])
     phone = StringField('Số điện thoại', validators=[DataRequired(), Regexp(r'^(0|\+84)[0-9]{8,10}$')])
     type = SelectField('Loại yêu cầu', choices=[('booking', 'Đặt bàn trước'), ('member', 'Đăng ký thành viên')])
-    date = DateField('Ngày', format='%d-%m-%Y', validators=[DataRequired()])
+    # FIX: Đổi format thành '%d/%m/%Y' để khớp với Flatpickr dateFormat: "d/m/Y"
+    date = DateField('Ngày', format='%d/%m/%Y', validators=[DataRequired()])
     time = TimeField('Giờ', validators=[DataRequired()])
     note = TextAreaField('Ghi chú thêm')
     submit = SubmitField('Gửi Yêu Cầu')
@@ -94,8 +121,6 @@ class Appointment(db.Model):
 
     @property
     def is_confirmed(self):
-        # SQLite returns 0/1 integers for Boolean columns.
-        # Always cast to real Python bool so Jinja rejectattr/selectattr work correctly.
         return bool(self._is_confirmed)
 
     @is_confirmed.setter
@@ -117,35 +142,39 @@ def role_required(*roles):
 # --- Logic Hệ Thống ---
 def seed_database():
     with app.app_context():
-        if not User.query.filter_by(username='admin').first():
+        if not User.query.filter_by(username=admin_user).first():
             admin = User(username=admin_user, role='admin')
             admin.set_password(admin_password)
             db.session.add(admin)
 
-        if not User.query.filter_by(username='manager').first():
+        if not User.query.filter_by(username=manager_user).first():
             manager = User(username=manager_user, role='manager')
             manager.set_password(manager_password)
             db.session.add(manager)
 
         db.session.commit()
 
-        excel_path = os.path.join(app.root_path, 'data', 'menu.xlsx')
-        if os.path.exists(excel_path):
-            try:
-                df = pd.read_excel(excel_path)
-                db.session.query(MenuItem).delete()
-                for _, row in df.iterrows():
-                    item = MenuItem()
-                    item.name = str(row.get('name', '')).strip()
-                    item.category = str(row.get('category', 'coffee')).strip()
-                    item.price = int(row.get('price', 0))
-                    item.description = str(row.get('description', '')) if pd.notna(row.get('description')) else ''
-                    item.image_url = str(row.get('image_url', '')) if pd.notna(row.get('image_url')) else ''
-                    db.session.add(item)
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                print(f"Lỗi Excel: {e}")
+        # FIX: Chỉ import từ Excel khi bảng menu_items đang trống.
+        # Trước đây luôn xóa và import lại mỗi khi restart,
+        # làm mất mọi thay đổi admin đã thực hiện qua CRUD.
+        if MenuItem.query.count() == 0:
+            excel_path = os.path.join(app.root_path, 'data', 'menu.xlsx')
+            if os.path.exists(excel_path):
+                try:
+                    df = pd.read_excel(excel_path)
+                    for _, row in df.iterrows():
+                        item = MenuItem()
+                        item.name = str(row.get('name', '')).strip()
+                        item.category = str(row.get('category', 'coffee')).strip()
+                        item.price = int(row.get('price', 0))
+                        item.description = str(row.get('description', '')) if pd.notna(row.get('description')) else ''
+                        item.image_url = str(row.get('image_url', '')) if pd.notna(row.get('image_url')) else ''
+                        db.session.add(item)
+                    db.session.commit()
+                    print(f"Đã import menu từ Excel.")
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"Lỗi Excel: {e}")
 
 # --- Routes Khách Hàng ---
 @login_manager.user_loader
@@ -213,16 +242,24 @@ def add_booking():
         session.pop('cart', None)
         flash('Đặt bàn thành công! Chúng tôi sẽ liên hệ xác nhận sớm nhất.', 'success')
     else:
-        flash('Thông tin không hợp lệ. Vui lòng kiểm tra lại.', 'error')
+        # Hiển thị lỗi field cụ thể để người dùng biết sửa chỗ nào
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'Lỗi — {error}', 'error')
     return redirect(url_for('index') + '#booking')
 
+
 # --- Routes Quản Lý ---
+class LoginForm(FlaskForm):
+    username = StringField('Tên đăng nhập', validators=[DataRequired()])
+    password = PasswordField('Mật khẩu', validators=[DataRequired()])
+    submit = SubmitField('Đăng Nhập →')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
-
         if user and user.check_password(form.password.data):
             login_user(user)
             return redirect(
@@ -242,7 +279,8 @@ def logout():
 @app.route('/admin')
 @role_required('admin')
 def admin_dashboard():
-    bookings = Appointment.query.order_by(Appointment.created_at.desc()).all()
+    # FIX: Giới hạn 200 bản ghi gần nhất, tránh tải toàn bộ DB vào RAM
+    bookings = Appointment.query.order_by(Appointment.created_at.desc()).limit(200).all()
     menu_items = MenuItem.query.order_by(MenuItem.category, MenuItem.name).all()
     form = MenuItemForm()
     return render_template('admin.html', bookings=bookings, menu_items=menu_items, form=form)
@@ -261,7 +299,7 @@ def manager_dashboard():
 def confirm_booking(id):
     booking = db.session.get(Appointment, id)
     if booking:
-        booking.is_confirmed = True  # noqa: SQLite stores as 1, cast explicitly
+        booking.is_confirmed = True
         db.session.commit()
         flash(f'Đã xác nhận đơn của {booking.customer_name}.', 'success')
     else:
@@ -297,10 +335,7 @@ def cancel_booking(id):
         flash('Không tìm thấy đặt bàn.', 'error')
     return redirect(request.referrer or url_for('manager_dashboard'))
 
-# ─────────────────────────────────────────
-# Menu CRUD (chỉ Admin)
-# ─────────────────────────────────────────
-
+# --- Menu CRUD (chỉ Admin) ---
 @app.route('/admin/menu/add', methods=['POST'])
 @role_required('admin')
 def add_menu_item():
@@ -365,12 +400,10 @@ def forbidden(e):
 @app.errorhandler(404)
 def not_found(e):
     return render_template('404.html'), 404
+
 with app.app_context():
     db.create_all()
     seed_database()
 
 if __name__ == '__main__':
-    # with app.app_context():
-    #     db.create_all()
-    #     seed_database()
-    app.run(host='0.0.0.0', port=2005)
+    app.run(host='0.0.0.0', port=2005, debug=True)
