@@ -156,26 +156,43 @@ def seed_database():
 
         db.session.commit()
 
-        # Import từ CSV khi bảng menu_items đang trống
-        if MenuItem.query.count() == 0:
-            csv_path = os.path.join(app.root_path, 'data', 'menu.csv')
-            if os.path.exists(csv_path):
-                try:
-                    with open(csv_path, mode='r', encoding='utf-8') as f:
-                        reader = csv.DictReader(f)
-                        for row in reader:
-                            item = MenuItem()
-                            item.name = row.get('name', '').strip()
-                            item.category = row.get('category', 'coffee').strip()
-                            item.price = int(row.get('price', 0))
-                            item.description = row.get('description', '').strip()
-                            item.image_url = row.get('image_url', '').strip()
+        # Đồng bộ menu từ CSV (upsert theo tên) — chạy mỗi lần khởi động
+        # - Món mới trong CSV → thêm vào DB
+        # - Món đã có (trùng tên) → cập nhật giá / mô tả / ảnh / category
+        # - Món chỉ có trong DB (thêm tay qua admin) → giữ nguyên, không xóa
+        csv_path = os.path.join(app.root_path, 'data', 'menu.csv')
+        if os.path.exists(csv_path):
+            try:
+                with open(csv_path, mode='r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    added = updated = 0
+                    for row in reader:
+                        name = row.get('name', '').strip()
+                        if not name:
+                            continue
+                        existing = MenuItem.query.filter_by(name=name).first()
+                        if existing:
+                            # Cập nhật các trường từ CSV, giữ id
+                            existing.category  = row.get('category', existing.category).strip()
+                            existing.price     = int(row.get('price', existing.price))
+                            existing.description = row.get('description', existing.description or '').strip()
+                            existing.image_url = row.get('image_url', existing.image_url or '').strip()
+                            updated += 1
+                        else:
+                            item = MenuItem(
+                                name=name,
+                                category=row.get('category', 'coffee').strip(),
+                                price=int(row.get('price', 0)),
+                                description=row.get('description', '').strip(),
+                                image_url=row.get('image_url', '').strip(),
+                            )
                             db.session.add(item)
-                    db.session.commit()
-                    print(f"Đã import menu từ file CSV thành công.")
-                except Exception as e:
-                    db.session.rollback()
-                    print(f"Lỗi khi đọc file CSV: {e}")
+                            added += 1
+                db.session.commit()
+                print(f"Đồng bộ menu từ CSV: thêm {added} món mới, cập nhật {updated} món.")
+            except Exception as e:
+                db.session.rollback()
+                print(f"Lỗi khi đồng bộ menu từ CSV: {e}")
 
 # --- Routes Khách Hàng ---
 @login_manager.user_loader
