@@ -7,20 +7,11 @@ const cursor = document.getElementById('cursor');
 const cursorDot = document.getElementById('cursorDot');
 
 if (cursor && cursorDot) {
-    let mouseX = 0, mouseY = 0;
-
     document.addEventListener('mousemove', (e) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
+        // Sử dụng CSS variables để GPU xử lý việc di chuyển mượt mà hơn
+        document.documentElement.style.setProperty('--mouse-x', e.clientX + 'px');
+        document.documentElement.style.setProperty('--mouse-y', e.clientY + 'px');
     }, { passive: true });
-
-    const updateCursor = () => {
-        const transformValue = `translate3d(${mouseX}px, ${mouseY}px, 0)`;
-        cursor.style.transform = transformValue;
-        cursorDot.style.transform = transformValue;
-        requestAnimationFrame(updateCursor);
-    };
-    requestAnimationFrame(updateCursor);
 }
 
 /* ── Navbar & Hero Parallax ── */

@@ -45,20 +45,21 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Vui lòng đăng nhập để tiếp tục.'
 
-# Cache-busting: inject ?v=<git_hash> vào URL static file
-# → browser biết tải lại đúng khi deploy code mới, cache lâu khi không đổi
+# Cache-busting: tính toán mã hash một lần khi khởi động
 import subprocess
+
+def get_git_revision_short_hash():
+    try:
+        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], 
+                                     stderr=subprocess.DEVNULL).decode().strip()
+    except Exception:
+        return os.environ.get('ASSET_VERSION', '1')
+
+ASSET_VERSION = get_git_revision_short_hash()
 
 @app.context_processor
 def inject_asset_version():
-    try:
-        v = subprocess.check_output(
-            ['git', 'rev-parse', '--short', 'HEAD'],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
-    except Exception:
-        v = os.environ.get('ASSET_VERSION', '1')
-    return dict(asset_version=v)
+    return dict(asset_version=ASSET_VERSION)
 
 admin_user = os.environ.get('ADMIN_USER')
 admin_password = os.environ.get('ADMIN_PASSWORD')

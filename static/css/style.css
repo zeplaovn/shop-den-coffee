@@ -114,8 +114,9 @@ body {
     pointer-events: none;
     z-index: 9999;
     will-change: transform;
-    /* Xóa hoàn toàn transition transform để 2 cái không bị lệch nhau khi di chuyển */
-    transition: opacity 0.3s ease, border-color 0.3s, background 0.3s;
+    /* Sử dụng biến CSS để GPU tối ưu hóa */
+    transform: translate3d(var(--mouse-x, -100px), var(--mouse-y, -100px), 0);
+    transition: opacity 0.3s ease, border-color 0.3s, background 0.3s, width 0.3s, height 0.3s;
 }
 
 .cursor {
