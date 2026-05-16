@@ -132,10 +132,11 @@ class Appointment(db.Model):
 def role_required(*roles):
     def decorator(f):
         @wraps(f)
-        @login_required
         def wrapped(*args, **kwargs):
-            if current_user.role not in roles:
-                abort(403)
+            # Nếu chưa đăng nhập HOẶC không đúng role -> Trả về 404 (Security through obscurity)
+            # Người dùng không có quyền sẽ không biết trang này tồn tại.
+            if not current_user.is_authenticated or current_user.role not in roles:
+                abort(404)
             return f(*args, **kwargs)
         return wrapped
     return decorator
