@@ -113,4 +113,6 @@ body {
 @media (max-width: 768px) {
     body { grid-template-columns: 1fr; }
     .login-visual { display: none; }
+    .login-form-panel { padding: 2rem 1.5rem; }
+    .login-title { font-size: 2rem; }
 }

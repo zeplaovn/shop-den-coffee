@@ -784,11 +784,23 @@ textarea.form-control {
 @media (max-width: 768px) {
     .sidebar { transform: translateX(-100%); }
     .main { margin-left: 0; }
-    .content { padding: 1.5rem; }
+    .topbar { padding: 0.8rem 1.25rem; }
+    .topbar-date { display: none; }
+    .content { padding: 1.25rem; }
     .form-grid { grid-template-columns: 1fr; }
     .form-group.full-width { grid-column: span 1; }
     .crud-controls { flex-direction: column; align-items: stretch; }
     .select-control { width: 100%; }
+
+    .stats-grid { grid-template-columns: 1fr; }
+    .stat-card { padding: 1.25rem; }
+}
+
+@media (max-width: 480px) {
+    .panel-header { flex-direction: column; align-items: flex-start; }
+    .panel-meta { margin-top: -0.5rem; }
+    .action-btns { flex-direction: column; }
+    .action-btn { width: 100%; justify-content: center; }
 }
 
 /* ============================================================

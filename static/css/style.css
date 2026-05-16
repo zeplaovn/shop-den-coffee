@@ -147,6 +147,16 @@ body {
     background: rgba(154, 124, 78, 0.1);
 }
 
+/* Ẩn cursor tùy chỉnh trên thiết bị cảm ứng hoặc khi không hỗ trợ hover */
+@media (hover: none) or (pointer: coarse) {
+    .cursor, .cursor-dot {
+        display: none !important;
+    }
+    body {
+        cursor: auto !important;
+    }
+}
+
 
 /* ============ FLASH MESSAGES (public pages) ============ */
 .flash-banner {
@@ -1346,8 +1356,28 @@ body {
         display: flex;
     }
 
+    .nav-inner {
+        height: 70px;
+    }
+
+    .hero-title {
+        font-size: clamp(3rem, 15vw, 5rem);
+    }
+
+    .hero-sub {
+        font-size: 0.9rem;
+        padding: 0 1rem;
+    }
+
+    .story-section,
+    .menu-section,
+    .booking-section {
+        padding: 5rem 1.5rem;
+    }
+
     .menu-grid {
         grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
     }
 
     .form-row {
@@ -1368,6 +1398,7 @@ body {
 
     .stats-strip {
         gap: 2rem;
+        padding: 2rem 1rem;
     }
 }
 
@@ -1376,11 +1407,27 @@ body {
         grid-template-columns: 1fr;
     }
 
+    .hero-title {
+        font-size: 3.2rem;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+    }
+
+    .btn-primary, .btn-ghost {
+        width: 100%;
+        justify-content: center;
+    }
+
     .footer-cols {
         grid-template-columns: 1fr;
     }
 
     .booking-form-card {
-        padding: 2rem;
+        padding: 2rem 1.5rem;
     }
 }
