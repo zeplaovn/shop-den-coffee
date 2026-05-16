@@ -1,6 +1,6 @@
 # Đen Coffee - Management System
 
-![Coffee Image]([https://images.unsplash.com/photo-1495474472645-4c60fc8541fd?w=1200&h=400&fit=crop](https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&q=80&w=800))
+![Coffee Image](https://images.unsplash.com/photo-1495474472645-4c60fc8541fd?w=1200&h=400&fit=crop)
 
 ## About Đen Coffee
 
