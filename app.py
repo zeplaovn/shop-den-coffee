@@ -182,6 +182,7 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 @app.route('/')
+@app.route('/home')
 def index():
     form = BookingForm()
     selected_items = session.get('cart', [])
