@@ -285,7 +285,6 @@ def logout():
 @app.route('/dashboard')
 @role_required('admin')
 def admin_dashboard():
-    # FIX: Giới hạn 200 bản ghi gần nhất, tránh tải toàn bộ DB vào RAM
     bookings = Appointment.query.order_by(Appointment.created_at.desc()).limit(200).all()
     menu_items = MenuItem.query.order_by(MenuItem.category, MenuItem.name).all()
     form = MenuItemForm()
@@ -413,4 +412,4 @@ with app.app_context():
     seed_database()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=2005, debug=True)
+    app.run(host='0.0.0.0', port=2005, debug=False)
