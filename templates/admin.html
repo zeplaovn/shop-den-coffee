@@ -380,6 +380,7 @@
                             {% if item.image_url %}
                             <img src="{{ item.image_url }}" alt="{{ item.name }}"
                                  class="menu-card-img"
+                                 loading="lazy" decoding="async"
                                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                             <div class="menu-card-img-placeholder" style="display:none">
                                 <i class="fas fa-mug-hot"></i>
@@ -459,6 +460,7 @@
                                         {% if item.image_url %}
                                         <img src="{{ item.image_url }}" alt="{{ item.name }}"
                                              style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--warm)"
+                                             loading="lazy" decoding="async"
                                              onerror="this.style.display='none'">
                                         {% else %}
                                         <div style="width:44px;height:44px;background:var(--light);border-radius:8px;border:1px solid var(--warm);display:flex;align-items:center;justify-content:center;color:var(--muted)">

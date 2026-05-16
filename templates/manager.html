@@ -296,7 +296,8 @@
                 id: {{ item.id }},
                 name: {{ item.name | tojson }},
                 price: {{ item.price }},
-                category: {{ item.category | tojson }}
+                category: {{ item.category | tojson }},
+                image_url: {{ (item.image_url or "") | tojson }}
             }{% if not loop.last %},{% endif %}
             {% endfor %}
         ];

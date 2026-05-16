@@ -336,13 +336,32 @@ body {
 .menu-item-btn {
     border: 1.5px solid var(--warm);
     border-radius: 12px;
-    padding: 0.9rem 0.75rem;
+    padding: 0; /* Xóa padding để ảnh tràn viền trên */
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
     background: var(--light);
     font-family: 'DM Sans', sans-serif;
     position: relative;
+    overflow: hidden; /* Đảm bảo ảnh bo góc */
+    display: flex;
+    flex-direction: column;
+}
+
+.pos-item-img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    border-bottom: 1px solid var(--warm);
+    background: var(--warm);
+}
+
+.pos-item-info {
+    padding: 0.6rem 0.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .menu-item-btn:hover {

@@ -26,9 +26,18 @@ const renderMenu = () => {
         const btn = document.createElement('button');
         btn.className = 'menu-item-btn';
         btn.dataset.category = item.category;
+        
+        let imgHtml = '';
+        if (item.image_url) {
+            imgHtml = `<img src="${item.image_url}" loading="lazy" decoding="async" class="pos-item-img" onerror="this.style.display='none'">`;
+        }
+
         btn.innerHTML = `
-            <div class="item-name">${item.name}</div>
-            <div class="item-price">${item.price.toLocaleString('vi-VN')}đ</div>
+            ${imgHtml}
+            <div class="pos-item-info">
+                <div class="item-name">${item.name}</div>
+                <div class="item-price">${item.price.toLocaleString('vi-VN')}đ</div>
+            </div>
             <div class="add-flash">✓</div>
         `;
         btn.onclick = () => { addItem(i); flashBtn(btn); };
